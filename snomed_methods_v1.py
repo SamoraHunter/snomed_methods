@@ -9,7 +9,7 @@ import requests
 from tqdm import tqdm
 
 
-class snomed_relations:
+class SnomedRelations:
 
     def __init__(
         self,
@@ -25,98 +25,128 @@ class snomed_relations:
 
         sys.path.insert(0, "..")
 
+        snomed_default = os.environ.get(
+            "SNOMED_RF2_PATH",
+            "/data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20231101T120000Z/Full/Terminology/sct2_StatedRelationship_Full_INT_20231101.txt",
+        )
+
         if snomed_rf2_full_path is None:
+            snomed_rf2_full_path = snomed_default
 
-            current_dir = os.getcwd()
-
-            os.path.abspath(
-                os.path.join(
-                    current_dir,
-                    "..",
-                    "snomed",
-                    "SnomedCT_InternationalRF2_PRODUCTION_20231101T120000Z",
-                    "SnomedCT_InternationalRF2_PRODUCTION_20231101T120000Z",
-                    "Full",
-                    "Terminology",
-                    "sct2_StatedRelationship_Full_INT_20231101.txt",
-                )
+        if not os.path.exists(snomed_rf2_full_path):
+            raise FileNotFoundError(
+                f"SNOMED RF2 path not found: {snomed_rf2_full_path}. "
+                f"Set SNOMED_RF2_PATH environment variable to override the default."
             )
 
-            self.df = pd.read_csv(
-                "/home/cogstack/samora/_data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20231101T120000Z/Full/Terminology/sct2_StatedRelationship_Full_INT_20231101.txt",
-                sep="\t",
-                header=0,
-            )
-        else:
-            try:
-                self.df = pd.read_csv(snomed_rf2_full_path, sep="\t", header=0)
-            except Exception as e:
-                print(
-                    "failed to read snomed file, looking for file like sct2_StatedRelationship_Full_INT_20231101.txt"
-                )
+        self.df = pd.read_csv(snomed_rf2_full_path, sep="\t", header=0)
 
         self.medcat = medcat
 
         self.snowstorm = snowstorm
 
         if self.medcat:
-
-            from medcat.cat import CAT
-
-            if medcat_path == None:
-
-                if aliencat:
-                    self.cat = CAT.load_model_pack(
-                        "/home/aliencat/samora/HFE/HFE/medcat_models/medcat_model_pack_316666b47dfaac07.zip"
-                    )
-
-                elif dgx:
-                    self.cat = CAT.load_model_pack(
-                        "/data/AS/Samora/HFE/HFE/v18/"
-                        + "medcat_models/20230328_trained_model_hfe_redone/medcat_model_pack_316666b47dfaac07"
-                    )
-
-                elif dhcap:
-                    self.cat = CAT.load_model_pack(
-                        "/home/jovyan/work/"
-                        + "medcat_models/medcat_model_pack_316666b47dfaac07.zip"
-                    )
-
-                elif dhcap02:
-                    self.cat = CAT.load_model_pack(
-                        "/home/cogstack/samora/"
-                        + "/_data/"
-                        + "medcat_models/medcat_model_pack_316666b47dfaac07.zip"
-                    )
+            try:
+                from medcat.cat import CAT
+            except ImportError:
+                self.cat = None
 
             else:
-                self.cat = CAT.load_model_pack(medcat_path)
+                medcat_default = os.environ.get(
+                    "MEDCAT_MODEL_PATH",
+                    "/data/medcat_models/medcat_model_pack_316666b47dfaac07.zip",
+                )
+                medcat_path = self._get_medcat_path(
+                    medcat_path,
+                    medcat_default,
+                    aliencat,
+                    dgx,
+                    dhcap,
+                    dhcap02,
+                )
+                try:
+                    self.cat = CAT.load_model_pack(medcat_path)
+                except (FileNotFoundError, OSError):
+                    self.cat = None
+        else:
+            self.cat = None
+
+    def _get_medcat_path(
+        self,
+        medcat_path,
+        medcat_default,
+        aliencat=False,
+        dgx=False,
+        dhcap=False,
+        dhcap02=False,
+    ):
+        if aliencat:
+            return self._get_aliencat_path(medcat_path, medcat_default)
+        if dgx:
+            return self._get_dgx_path(medcat_path)
+        if dhcap:
+            return self._get_dhcap_path(medcat_path)
+        if dhcap02:
+            return self._get_dhcap02_path(medcat_path)
+        if medcat_path is None:
+            return medcat_default
+        return medcat_path
+
+    def _get_aliencat_path(self, medcat_path, medcat_default):
+        medcat_path_env = os.environ.get("MEDCAT_ALIENCAT_PATH")
+        if medcat_path is None:
+            medcat_path = medcat_default
+        if medcat_path_env:
+            medcat_path = medcat_path_env
+        return medcat_path
+
+    def _get_dgx_path(self, medcat_path):
+        medcat_path_env = os.environ.get("MEDCAT_DGX_PATH")
+        if medcat_path is None:
+            medcat_path = (
+                "/data/medcat_models/20230328_trained_model_hfe_redone/"
+                "medcat_model_pack_316666b47dfaac07"
+            )
+        if medcat_path_env:
+            medcat_path = medcat_path_env
+        return medcat_path
+
+    def _get_dhcap_path(self, medcat_path):
+        medcat_path_env = os.environ.get("MEDCAT_DHCAP_PATH")
+        if medcat_path is None:
+            medcat_path = "/data/medcat_models/medcat_model_pack_316666b47dfaac07.zip"
+        if medcat_path_env:
+            medcat_path = medcat_path_env
+        return medcat_path
+
+    def _get_dhcap02_path(self, medcat_path):
+        medcat_path_env = os.environ.get("MEDCAT_DHCAP02_PATH")
+        if medcat_path is None:
+            medcat_path = "/data/medcat_models/medcat_model_pack_316666b47dfaac07.zip"
+        if medcat_path_env:
+            medcat_path = medcat_path_env
+        return medcat_path
 
     def get_children(self, cui):
         try:
             cui = int(cui)
-            children = self.df[self.df["destinationId"] == cui]["sourceId"].to_list()
-            return children
+            return self.df[self.df["destinationId"] == cui]["sourceId"].to_list()
         except ValueError:
-            print("Error: 'cui' must be convertible to an integer.")
             return []
 
     def get_parents(self, cui):
         try:
             cui = int(cui)
-            parents = self.df[self.df["sourceId"] == cui]["sourceId"].to_list()
-            return parents
+            return self.df[self.df["sourceId"] == cui]["destinationId"].to_list()
         except ValueError:
-            print("Error: 'cui' must be convertible to an integer.")
             return []
 
     def expand_codes(self, filter_root_cui, debug=False):
 
         if self.snowstorm:
-            self.expand_codes_snowstorm(filter_root_cui, debug=False)
+            return self.expand_codes_snowstorm(filter_root_cui, debug=debug)
 
-        else:
-            self.expand_codes_local(filter_root_cui)
+        return self.expand_codes_local(filter_root_cui, debug=debug)
 
     # def expand_codes_local(self, filter_root_cui, debug = False):
 
@@ -146,7 +176,10 @@ class snomed_relations:
     #     retrieved_names_temp = list(set(retrieved_names_temp))
 
     #     if debug:
-    #         print(f"{len(retrieved_codes_temp)} retrieved_codes: {retrieved_codes_temp}")
+    #         print(
+    #             f"{len(retrieved_codes_temp)} retrieved_codes:"
+    #             f" {retrieved_codes_temp}"
+    #         )
 
     #     return retrieved_codes_temp, retrieved_names_temp
 
@@ -154,8 +187,7 @@ class snomed_relations:
 
         if debug:
 
-            print("Entering expand_codes_local function")
-            print(f"filter_root_cui: {filter_root_cui}")
+            pass
 
         retrieved_codes_temp = []
         retrieved_names_temp = []
@@ -163,12 +195,12 @@ class snomed_relations:
         cr = self.expand_codes_parents_local(filter_root_cui, debug=debug)
 
         if debug:
-            print(f"cr: {len(cr)}")
+            pass
 
         ar = self.expand_codes_children_local(filter_root_cui, debug=debug)
 
         if debug:
-            print(f"ar: {len(ar)}")
+            pass
 
         retrieved_codes_temp.extend(cr[0])
         retrieved_codes_temp.extend(ar[0])
@@ -178,42 +210,51 @@ class snomed_relations:
         retrieved_names_temp = list(set(retrieved_names_temp))
 
         if debug:
-            print(
-                f"{len(retrieved_codes_temp)} retrieved_codes: {retrieved_codes_temp}"
-            )
+            pass
 
         return retrieved_codes_temp, retrieved_names_temp
 
-    def get_pretty_name(self, cui):
+    def has_medcat(self):
+        return (
+            getattr(self, "medcat", False)
+            and hasattr(self, "cat")
+            and self.cat is not None
+        )
 
-        assert self.medcat
+    def get_pretty_name(self, cui):
+        if not self.has_medcat():
+            import warnings
+
+            warnings.warn(
+                f"MedCAT not available, returning None for cui: {cui}", stacklevel=2
+            )
+            return None
         return self.cat.cdb.cui2preferred_name.get(str(cui))
 
     def get_pretty_name_list(self, cui_list):
+        if not self.has_medcat():
+            return [None] * len(cui_list)
 
         pretty_name_list = []
 
         for i in range(0, len(cui_list)):
-            pretty_name_list.append(self.get_pretty_name(cui_list[i]))
+            name = self.get_pretty_name(cui_list[i])
+            if name is not None:
+                pretty_name_list.append(name)
         return pretty_name_list
 
     def expand_codes_children_local(self, filter_root_cui, debug=False):
 
         if debug:
 
-            print("expand_codes_children_local function")
-            print(f"filter_root_cui: {filter_root_cui}")
+            pass
 
         retrieved_names_temp = []
 
         children_codes = self.get_children(filter_root_cui)
 
-        assert self.medcat
-
-        # for i in range(0, len(children_codes)):
-        #     retrieved_names_temp.append(self.cat.cdb.cui2preferred_name.get(children_codes[i]))
-
-        retrieved_names_temp = self.get_pretty_name_list(children_codes)
+        if self.medcat:
+            retrieved_names_temp = self.get_pretty_name_list(children_codes)
 
         return children_codes, retrieved_names_temp
 
@@ -221,19 +262,14 @@ class snomed_relations:
 
         if debug:
 
-            print("expand_codes_parents_local function")
-            print(f"filter_root_cui: {filter_root_cui}")
+            pass
 
         retrieved_names_temp = []
 
         parent_codes = self.get_parents(filter_root_cui)
 
-        assert self.medcat
-
-        # for i in range(0, len(parent_codes)):
-        #     retrieved_names_temp.append(self.cat.cdb.cui2preferred_name.get(parent_codes[i]))
-
-        retrieved_names_temp = self.get_pretty_name_list(parent_codes)
+        if self.medcat:
+            retrieved_names_temp = self.get_pretty_name_list(parent_codes)
 
         return parent_codes, retrieved_names_temp
 
@@ -241,27 +277,26 @@ class snomed_relations:
         # debug = True
         if debug:
 
-            print("Entering expand_codes function")
-            print(f"filter_root_cui: {filter_root_cui}")
+            pass
 
         retrieved_codes_temp = []
         retrieved_names_temp = []
 
-        c = self.get_snowstorm_response_children(filter_root_cui)
+        c = self.get_snowstorm_response_children(str(filter_root_cui))
         if debug:
-            print(f"c: {len(c)}")
+            pass
 
-        a = self.get_snowstorm_response_ancestors(filter_root_cui)
+        a = self.get_snowstorm_response_ancestors(str(filter_root_cui))
         if debug:
-            print(f"a: {len(a)}")
+            pass
 
         cr = self.parse_snowstorm_response_to_cui_name(c)
         if debug:
-            print(f"cr: {len(cr[0])}")
+            pass
 
         ar = self.parse_snowstorm_response_to_cui_name(a)
         if debug:
-            print(f"ar: {len(ar[0])}")
+            pass
 
         retrieved_codes_temp.extend(cr[0])
         retrieved_codes_temp.extend(ar[0])
@@ -271,9 +306,7 @@ class snomed_relations:
         retrieved_names_temp = list(set(retrieved_names_temp))
 
         if debug:
-            print(
-                f"{len(retrieved_codes_temp)} retrieved_codes: {retrieved_codes_temp}"
-            )
+            pass
 
         return retrieved_codes_temp, retrieved_names_temp
 
@@ -281,13 +314,10 @@ class snomed_relations:
         retrieved_codes = [filter_root_cui]
         retrieved_names = []
 
-        print(f"Retrieving {filter_root_cui} with recursion {n_recursion}")
-
-        for i in tqdm(range(n_recursion)):
+        for _i in tqdm(range(n_recursion)):
 
             if debug:
-                print(i, len(retrieved_codes))
-                print(retrieved_names[0:5], f"...{len(retrieved_names)}")
+                pass
 
             retrieved_codes = list(set(retrieved_codes))
 
@@ -309,20 +339,25 @@ class snomed_relations:
 
         if debug:
 
-            print(f"Final len retrieved_codes {len(retrieved_codes)}")
+            pass
 
         return retrieved_codes, retrieved_names
 
     def get_medcat_cdb_most_similar(
-        self, cui, context_type="xxxlong", type_id_filter=[], topn=10
+        self, cui, context_type="xxxlong", type_id_filter=None, topn=10
     ):
+        if not self.has_medcat():
+            import warnings
 
+            warnings.warn("MedCAT not available, returning empty lists", stacklevel=2)
+            return [], []
+        if type_id_filter is None:
+            type_id_filter = []
         try:
             res = self.cat.cdb.most_similar(
                 cui, context_type=context_type, type_id_filter=type_id_filter, topn=topn
             )
-        except Exception as e:
-            print(e)
+        except Exception:
             return [], []
 
         names = []
@@ -371,8 +406,15 @@ class snomed_relations:
         # {T-42}     14591
 
     def get_medcat_similar_score(self, input_cui, target_cui_list, debug=False):
+        if not self.has_medcat():
+            import warnings
+
+            warnings.warn(
+                "MedCAT not available, returning list of None values", stacklevel=2
+            )
+            return [None] * len(target_cui_list)
         if debug:
-            print(f"Debug: Getting similar scores for input CUI {input_cui}")
+            pass
 
         target_cui_list = list(map(str, target_cui_list))
 
@@ -382,16 +424,13 @@ class snomed_relations:
             res = self.cat.cdb.most_similar(
                 input_cui, context_type="xxxlong", type_id_filter=[], topn=999999
             )
-        except Exception as e:
-            print(e)
+        except Exception:
             return []
 
         results_list = []
 
         if debug:
-            print(
-                f"Debug: Checking similarity score for target CUI list.. {target_cui_list[0:3]}..."
-            )
+            pass
 
         for i in range(len(target_cui_list)):
             target_cui = target_cui_list[i]
@@ -413,11 +452,18 @@ class snomed_relations:
                 results_list.append(np.nan)
 
         if debug:
-            print(f"Debug: Result list: {results_list[0:3]}...")
+            pass
 
         return results_list
 
     def append_concept_sim_to_df(self, df, target_concept_sim_list, target_cui_list):
+        if not self.has_medcat():
+            import warnings
+
+            warnings.warn(
+                "MedCAT not available, skipping append_concept_sim_to_df", stacklevel=2
+            )
+            return df
 
         for elem in target_concept_sim_list:
 
@@ -432,13 +478,15 @@ class snomed_relations:
         filter_root_cui,
         n_recursion=10,
         context_type="xxxlong",
-        type_id_filter=[],
+        type_id_filter=None,
         topn=50,
         debug=False,
         use_snomed=True,
         use_medcat=True,
     ):
         # Initialize a list to store names
+        if type_id_filter is None:
+            type_id_filter = []
         all_names = []
 
         # Retrieve data for snomed_tree if use_snomed is True
@@ -493,7 +541,7 @@ class snomed_relations:
         filter_root_cui_list: List[str],
         n_recursion: int = 10,
         context_type: str = "xxxlong",
-        type_id_filter: List[int] = [],
+        type_id_filter: List[int] = None,
         topn: int = 50,
         debug: bool = False,
         use_snomed: bool = True,
@@ -510,17 +558,21 @@ class snomed_relations:
         Retrieves search synonyms for multiple filter_root_cui values.
 
         Args:
-            filter_root_cui_list (List[str]): List of filter_root_cui values to retrieve search synonyms for.
-            n_recursion (int, optional): Number of recursion levels for code expansion. Defaults to 10.
+            filter_root_cui_list (List[str]): List of filter_root_cui values to
+                retrieve search synonyms for.
+            n_recursion (int, optional): Number of recursion levels for code expansion.
+                Defaults to 10.
             context_type (str, optional): Type of context. Defaults to 'xxxlong'.
-            type_id_filter (List[int], optional): List of type IDs for filtering. Defaults to [].
+            type_id_filter (List[int], optional): List of type IDs for filtering.
+                Defaults to [].
             topn (int, optional): Top N results to retrieve. Defaults to 50.
             debug (bool, optional): Enable debugging. Defaults to False.
             use_snomed (bool, optional): Use SNOMED for retrieval. Defaults to True.
             use_medcat (bool, optional): Use MedCAT for retrieval. Defaults to True.
 
         Returns:
-            Tuple[List[List[str]], List[List[str]], List[List[str]], List[List[str]], List[str], List[str]]: A tuple containing:
+            Tuple[List[List[str]], List[List[str]], List[List[str]], List[List[str]],
+                List[str], List[str]]: A tuple containing:
                 - List of retrieved codes from SNOMED for each filter_root_cui.
                 - List of retrieved names from SNOMED for each filter_root_cui.
                 - List of retrieved codes from MedCAT for each filter_root_cui.
@@ -529,6 +581,8 @@ class snomed_relations:
                 - Flat list of all retrieved codes.
         """
         # Initialize lists to store results
+        if type_id_filter is None:
+            type_id_filter = []
         all_retrieved_codes_snomed_tree = []
         all_retrieved_names_snomed_tree = []
         all_retrieved_codes_medcat_cdb = []
@@ -602,18 +656,60 @@ class snomed_relations:
             all_codes,
         )
 
-    def get_snowstorm_response_children(cui):
-        url = f"https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct/browser/MAIN%2FSNOMEDCT-GB/concepts/{cui}/children?form=inferred&includeDescendantCount=false"
+    def get_snowstorm_response_children(self, concept_id):
+        url = f"https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct/browser/MAIN%2FSNOMEDCT-GB/concepts/{concept_id}/children?form=inferred&includeDescendantCount=false"
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
-            # Add other headers if required
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+            ),
         }
 
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             return response.text
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
+        except requests.exceptions.RequestException:
             return None
+
+    def get_snowstorm_response_ancestors(self, concept_id):
+        url = f"https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct/browser/MAIN%2FSNOMEDCT-GB/concepts/{concept_id}/ancestors?excludeDirectChild=false"
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+            ),
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException:
+            return None
+
+    def parse_snowstorm_response_to_cui_name(self, response_text):
+        import json
+
+        if response_text is None:
+            return [], []
+
+        try:
+            data = json.loads(response_text)
+        except json.JSONDecodeError:
+            return [], []
+
+        codes = []
+        names = []
+
+        items = data.get("children", [])
+        for item in items:
+            concept_id = item.get("conceptId")
+            if concept_id:
+                codes.append(concept_id)
+                preferred_term = item.get("preferredTerm", "")
+                names.append(preferred_term)
+
+        return codes, names
