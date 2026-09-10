@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+set -e  # exit on any failure
+
+# Navigate to repository root (relative to the hook location)
+cd "$(dirname "$0")/.."
+
+# Relative path to Python in the venv
+VENV_PYTHON="./snomed_methods_env/bin/python"
+
+if [ ! -x "$VENV_PYTHON" ]; then
+    echo "Virtual environment Python not found at $VENV_PYTHON"
+    exit 1
+fi
+
+echo "Running test suite..."
+PYTHONPATH=. "$VENV_PYTHON" -m pytest
+
+echo "All checks passed. Proceeding with push."
+exit 0

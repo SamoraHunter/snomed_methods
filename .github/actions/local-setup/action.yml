@@ -1,0 +1,155 @@
+# .github/actions/local-setup/action.yml
+name: 'Local Runner Setup'
+description: 'Configures proxy, certificates, and pre-installs Python for local act runs.'
+
+inputs:
+  gitea-token:
+    description: 'Token for authenticating with Gitea'
+    required: false
+  python-mirror-url:
+    description: 'URL for the Python binary archive'
+    required: false
+  internal-proxy-host:
+    description: 'Internal proxy host'
+    required: false
+  internal-domain:
+    description: 'Internal domain for no-proxy'
+    required: false
+  internal-cert-name:
+    description: 'Name of the internal CA certificate file'
+    required: false
+outputs:
+  on-corp-network:
+    description: "True if the runner appears to be on the corporate network"
+    value: ${{ steps.proxy-config.outputs.on-corp-network }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Configure Proxy for Corporate Network
+      id: proxy-config
+      shell: bash
+      env:
+        INTERNAL_PROXY_HOST_VAR: ${{ inputs.internal-proxy-host }}
+        INTERNAL_DOMAIN_VAR: ${{ inputs.internal-domain }}
+      run: |
+        PROXY_HOST="${INTERNAL_PROXY_HOST_VAR:-$INTERNAL_PROXY_HOST}"
+        INTERNAL_DOMAIN="${INTERNAL_DOMAIN_VAR:-$INTERNAL_DOMAIN}"
+        ON_CORP=false
+        if [[ -n "$PROXY_HOST" ]] && ping -c 1 "$PROXY_HOST" &> /dev/null; then
+          echo "✅ Proxy server '$PROXY_HOST' is available. Configuring environment variables."
+          echo "http_proxy=http://$PROXY_HOST:8008" >> $GITHUB_ENV
+          echo "https_proxy=http://$PROXY_HOST:8008" >> $GITHUB_ENV
+          ON_CORP=true
+          NO_PROXY_LIST="localhost,127.0.0.1,${INTERNAL_DOMAIN},github.com,*.blob.core.windows.net,${ACTIONS_CACHE_URL#http://}"
+          echo "NO_PROXY=$NO_PROXY_LIST" >> $GITHUB_ENV
+        fi
+        echo "on-corp-network=${ON_CORP}" >> $GITHUB_OUTPUT
+
+    - name: Install System Dependencies
+      shell: bash
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get -qq update
+        apt-get -qq install -y --no-install-recommends \
+          git tzdata apt-utils ca-certificates curl nodejs npm file > /dev/null
+        ln -sf /usr/share/zoneinfo/Europe/London /etc/localtime
+        echo "TZ=Europe/London" >> $GITHUB_ENV
+
+    - name: Trust Corporate Certificate
+      shell: bash
+      env:
+        INTERNAL_CERT_NAME_VAR: ${{ inputs.internal-cert-name }}
+      run: |
+        CERT_NAME="${INTERNAL_CERT_NAME_VAR:-$INTERNAL_CERT_NAME}"
+        CERT_PATH="/usr/local/share/ca-certificates/$CERT_NAME"
+        if [ -f "$CERT_PATH" ]; then
+          echo "✅ Corporate certificate found. Updating system trust store..."
+          update-ca-certificates > /dev/null
+        else
+          echo "⚠️ Corporate certificate not found. Proceeding without it."
+        fi
+        echo "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+        echo "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+
+    - name: Pre-install Python from Gitea Mirror
+      env:
+        GITEA_TOKEN: ${{ inputs.gitea-token }}
+        PYTHON_MIRROR_URL_VAR: ${{ inputs.python-mirror-url }}
+        INTERNAL_DOMAIN_VAR: ${{ inputs.internal-domain }}
+      shell: bash
+      run: |
+        # Use input if provided, otherwise fallback to existing environment variables (common in local act runs)
+        PYTHON_BINARY_URL="${PYTHON_MIRROR_URL_VAR:-$PYTHON_MIRROR_URL}"
+        INTERNAL_DOMAIN="${INTERNAL_DOMAIN_VAR:-$INTERNAL_DOMAIN}"
+
+        # CRITICAL FIX: Remove literal double quotes if they were included in the variable definition
+        PYTHON_BINARY_URL=$(echo "$PYTHON_BINARY_URL" | sed -e 's/^"//' -e 's/"$//')
+
+        if [[ -z "${PYTHON_BINARY_URL}" ]]; then
+          echo "⚠️ PYTHON_MIRROR_URL is not set. Skipping pre-installation of Python."
+          exit 0
+        fi
+
+        # Validation: Fail early if Gitea URL is used without a token
+        if [[ "$PYTHON_BINARY_URL" == *"kingsch.nhs.uk"* ]] && [[ -z "${GITEA_TOKEN}" ]]; then
+          echo "❌ ERROR: Internal Gitea URL detected but GITEA_TOKEN is not set."
+          echo "If running locally with 'act', you must provide the secret: act -s GITEA_TOKEN=your_token"
+          exit 1
+        fi
+
+        INSTALL_DIR="/opt/hostedtoolcache/Python/3.10.18/x64"
+        mkdir -p "$INSTALL_DIR"
+
+        PYTHON_BINARY_FILENAME=$(basename "$PYTHON_BINARY_URL")
+
+        # Debug: List files to check if the local archive was copied by act (might be ignored by .gitignore)
+        echo "📂 Files in workspace:"
+        ls -lh
+
+        if [ -f "$PYTHON_BINARY_FILENAME" ]; then
+            echo "✅ Found local Python archive at '$PYTHON_BINARY_FILENAME'. Using it instead of downloading."
+            cp "$PYTHON_BINARY_FILENAME" "python.tar.gz"
+        elif [ -f "python.tar.gz" ] && gzip -t "python.tar.gz" 2>/dev/null; then
+            echo "✅ Found valid local 'python.tar.gz'. Using it."
+        else
+            echo "ℹ️ Local Python archive not found in repository root. Proceeding with download from Gitea..."
+            echo "📥 Downloading Python from: $PYTHON_BINARY_URL"
+
+            EFF_URL=$(curl -L --fail --show-error --retry 3 --retry-delay 5 \
+                -H "Authorization: token ${GITEA_TOKEN}" \
+                --noproxy "$INTERNAL_DOMAIN" \
+                --write-out "%{url_effective}" \
+                -o python.tar.gz "$PYTHON_BINARY_URL")
+
+            if [[ "$EFF_URL" == *"/user/login"* ]]; then
+                echo "❌ ERROR: Download was redirected to Gitea login. Check GITEA_TOKEN permissions."
+                exit 1
+            fi
+        fi
+
+        echo "📏 File size on disk: $(stat -c%s python.tar.gz) bytes"
+        echo "📏 Expected ~67MB+. Testing integrity..."
+        gzip -t python.tar.gz && echo "✅ gzip OK" || echo "❌ gzip corrupt"
+
+        FILE_TYPE=$(file -b --mime-type python.tar.gz)
+        echo "🔎 Downloaded file type: $FILE_TYPE"
+        if [[ "$FILE_TYPE" != "application/gzip" && "$FILE_TYPE" != "application/x-gzip" ]]; then
+          echo "❌ Error: Downloaded file is not a gzipped tar archive. It might be an HTML login page due to an authentication error."
+          head -n 20 python.tar.gz
+          exit 1
+        fi
+
+        echo "📦 Extracting Python..."
+        tar -xzf python.tar.gz -C "$INSTALL_DIR" --strip-components=1
+        rm python.tar.gz
+
+        echo "✅ Python successfully installed"
+        "$INSTALL_DIR/bin/python3" --version
+
+        # Create the marker file for setup-python
+        touch "${INSTALL_DIR}.complete"
+
+        # Set the AGENT_TOOLSDIRECTORY to tell setup-python where to look
+        echo "AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache" >> $GITHUB_ENV

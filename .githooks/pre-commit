@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+set -e
+
+# Navigate to the hook location's parent directory (repo root)
+cd "$(dirname "$0")/.."
+
+# Relative path to Python in the venv
+VENV_PYTHON="./snomed_methods_env/bin/python"
+
+ARGS=(hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit)
+
+HERE="$(pwd)/.githooks"
+ARGS+=(--hook-dir "$HERE" -- "$@")
+
+if [ -x "$VENV_PYTHON" ]; then
+    exec "$VENV_PYTHON" -mpre_commit "${ARGS[@]}"
+elif command -v pre-commit > /dev/null; then
+    exec pre-commit "${ARGS[@]}"
+else
+    echo '`pre-commit` not found. Please install it in your venv.' 1>&2
+    exit 1
+fi

@@ -1,0 +1,108 @@
+# This workflow builds and deploys the Sphinx documentation to GitHub Pages.
+
+name: Build and Deploy Docs
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      is_self_hosted: ${{ steps.detect_env.outputs.is_self_hosted }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect Runner Environment
+        id: detect_env
+        run: |
+          IS_SELF_HOSTED=false
+          IS_ACT=false
+          IS_GITEA=false
+          if [ -n "$ACT" ]; then
+            echo "Runner environment: local act"
+            IS_ACT=true
+            IS_SELF_HOSTED=true
+          elif [ "${{ github.server_url }}" != "https://github.com" ]; then
+            echo "Runner environment: Gitea"
+            IS_GITEA=true
+            IS_SELF_HOSTED=true
+          else
+            echo "Runner environment: GitHub.com"
+          fi
+          echo "is_act=$IS_ACT" >> $GITHUB_OUTPUT
+          echo "is_gitea=$IS_GITEA" >> $GITHUB_OUTPUT
+          echo "is_self_hosted=$IS_SELF_HOSTED" >> $GITHUB_OUTPUT
+
+      - name: Perform Local Runner Setup
+        id: local_setup
+        if: steps.detect_env.outputs.is_self_hosted == 'true'
+        uses: ./.github/actions/local-setup
+        with:
+          gitea-token: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.18'
+          check-latest: false
+
+      - name: Fix pip installation
+        if: steps.detect_env.outputs.is_self_hosted == 'true'
+        run: |
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python3 - --ignore-installed
+          python3 -m pip install --upgrade --ignore-installed pip setuptools wheel
+
+      - name: Install dependencies
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          pip_install_args=()
+          if [[ "${{ steps.local_setup.outputs.on-corp-network }}" == "true" ]]; then
+              echo "🔧 On corporate network - using local mirror and removing hash requirements"
+              find . -name "requirements*.txt" -type f -exec sed -i 's/ --hash=sha256:[a-f0-9]*//g' {} \;
+              pip_install_args+=("--trusted-host" "$INTERNAL_PROXY_HOST" "-i" "$INTERNAL_PYPI_MIRROR")
+          fi
+
+          echo "Installing project dependencies for docs..."
+          pip install "${pip_install_args[@]}" -e ".[all,dev]"
+
+      - name: Build Sphinx documentation
+        run: |
+          python3 -m sphinx.cmd.build -b html docs/source docs/build/html
+
+      - name: Setup Pages
+        if: steps.detect_env.outputs.is_self_hosted != 'true'
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        if: steps.detect_env.outputs.is_self_hosted != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build/html
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.build.outputs.is_self_hosted != 'true'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
