@@ -45,7 +45,9 @@ dev = [
     "pre-commit"
 ]
 medcat = [
-    "medcat>=1.5.0",
+    "medcat>=1.5.0,<2.0.0",
+    "transformers<5.0.0",
+    "sentence-transformers<5.0.0",
 ]
 
 [project.scripts]
@@ -82,6 +84,7 @@ lint.select = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"llm_concept_embedder.py" = ["T201", "E501", "C901"]
 "semantic_expansion.py" = ["C901", "B028", "E501"]
 "**/*.ipynb" = ["T201", "E402", "A004", "B007", "F821"]
 "test_*.py" = ["T201", "E501"]
