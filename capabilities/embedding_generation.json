@@ -1,0 +1,158 @@
+{
+  "name": "Embedding Generation",
+  "version": "1.0",
+  "category": "embeddings",
+  "description": "Generate high-dimensional vector embeddings for clinical concepts using various LLM backends",
+  "classes": [
+    {
+      "name": "ClinicalConceptEmbedder",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize with model name and backend type",
+          "parameters": [
+            {"name": "model_name_or_path", "type": "str", "required": true},
+            {"name": "backend", "type": "str", "required": false, "default": "hf", "choices": ["hf", "transformers", "ollama"]},
+            {"name": "device", "type": "str", "required": false, "default": "cpu"},
+            {"name": "batch_size", "type": "int", "required": false, "default": 64},
+            {"name": "ollama_base_url", "type": "str", "required": false, "default": "http://localhost:11434"}
+          ]
+        },
+        {
+          "name": "prepare_concept_text",
+          "description": "Format concept data into dense clinical text prompts",
+          "parameters": [
+            {"name": "concept_df", "type": "pandas.DataFrame", "required": true},
+            {"name": "text_columns", "type": "list[str]", "required": false, "default": ["preferred_name", "synonyms", "type_id"]}
+          ],
+          "returns": {
+            "type": "list[str]",
+            "description": "List of formatted concept description strings"
+          }
+        },
+        {
+          "name": "generate_embeddings",
+          "description": "Generate embeddings for concept texts with checkpoint support",
+          "parameters": [
+            {"name": "concept_texts", "type": "list[str]", "required": true},
+            {"name": "batch_size", "type": "int", "required": false, "default": null},
+            {"name": "checkpoint_path", "type": "str", "required": false, "default": null},
+            {"name": "checkpoint_interval", "type": "int", "required": false, "default": 500}
+          ],
+          "returns": {
+            "type": "numpy.ndarray",
+            "description": "2D array of embeddings (n_concepts x embedding_dim)"
+          }
+        },
+        {
+          "name": "export_embeddings",
+          "description": "Save embeddings to disk in pickle or NPZ format",
+          "parameters": [
+            {"name": "embeddings_dict", "type": "dict[str, numpy.ndarray]", "required": true},
+            {"name": "output_path", "type": "str", "required": true}
+          ]
+        },
+        {
+          "name": "export_dataframe",
+          "description": "Export concept DataFrame to CSV or Parquet",
+          "parameters": [
+            {"name": "df", "type": "pandas.DataFrame", "required": true},
+            {"name": "output_path", "type": "str", "required": true}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_init_hf_model",
+      "description": "Initialize Hugging Face SentenceTransformer backend"
+    },
+    {
+      "name": "_init_transformers_model",
+      "description": "Initialize direct HuggingFace Transformers model backend"
+    },
+    {
+      "name": "_init_ollama_client",
+      "description": "Initialize Ollama API client for local LLM inference"
+    }
+  ],
+  "functions": [
+    {
+      "name": "load_concepts_from_medcat",
+      "description": "Load concepts from a MedCAT CAT object into DataFrame",
+      "parameters": [
+        {"name": "cat", "type": "medcat.cat.CAT", "required": true}
+      ],
+      "returns": {
+        "type": "pandas.DataFrame",
+        "columns": ["cui", "preferred_name", "synonyms", "type_id"]
+      }
+    },
+    {
+      "name": "load_concepts_from_cdb",
+      "description": "Load concepts from MedCAT ConceptDatabase directly into DataFrame",
+      "parameters": [
+        {"name": "cdb", "type": "medcat.cdb.ConceptDatabase", "required": true}
+      ],
+      "returns": {
+        "type": "pandas.DataFrame",
+        "columns": ["cui", "preferred_name", "synonyms", "type_id"]
+      }
+    }
+  ],
+  "backends": [
+    {
+      "name": "hf",
+      "description": "HuggingFace SentenceTransformer",
+      "framework": "sentence-transformers",
+      "features": ["Fast inference", "CPU/GPU support", "Pre-trained models"],
+      "models": [
+        "all-MiniLM-L6-v2",
+        "sentence-t5-xl",
+        "msmarco-distilbert-base-tas-b"
+      ]
+    },
+    {
+      "name": "transformers",
+      "description": "Direct HuggingFace Transformers access",
+      "framework": "transformers",
+      "features": ["Custom architectures", "Model-specific tokenization"],
+      "models": [
+        "cambridgeltl/SapBERT-from-PubMedBERT-fulltext",
+        "dmis-lab/biobert-v1.1"
+      ]
+    },
+    {
+      "name": "ollama",
+      "description": "Local LLM via Ollama API",
+      "framework": "ollama",
+      "features": ["Local inference", "No GPU required", "Custom models"],
+      "models": [
+        "qwen2.5-coder",
+        "stable-code",
+        "nomic-embed-text"
+      ]
+    }
+  ],
+  "example_usage": [
+    "from llm_concept_embedder import ClinicalConceptEmbedder, load_concepts_from_medcat",
+    "# Initialize embedder with HuggingFace model",
+    "embedder = ClinicalConceptEmbedder(",
+    "    model_name_or_path='all-MiniLM-L6-v2',",
+    "    backend='hf',",
+    "    device='cuda' if torch.cuda.is_available() else 'cpu'",
+    ")",
+    "# Load concepts from SNOMED or MedCAT",
+    "from snomed_term_lookup import create_term_lookup_from_directory",
+    "lookup = create_term_lookup_from_directory('/path/to/snomed')",
+    "matches = lookup.find_concepts_by_term('meningioma', top_n=100)",
+    "concept_df = pd.DataFrame([{'cui': c, 'preferred_name': t} for c, t in matches])",
+    "# Prepare text prompts and generate embeddings",
+    "text_prompts = embedder.prepare_concept_text(concept_df)",
+    "embeddings = embedder.generate_embeddings(text_prompts, batch_size=64)",
+    "# Export embeddings",
+    "cui_to_embedding = {",
+    "    cui: embeddings[i] for i, cui in enumerate(concept_df['cui'])",
+    "}",
+    "embedder.export_embeddings(cui_to_embedding, './outputs/concept_embeddings.pkl')"
+  ]
+}

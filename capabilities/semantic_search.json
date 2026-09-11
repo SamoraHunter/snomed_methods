@@ -1,0 +1,211 @@
+{
+  "name": "Semantic Search",
+  "version": "1.0",
+  "category": "semantic",
+  "description": "Comprehensive concept discovery using combined term matching, hierarchy expansion, and optional MedCAT similarity",
+  "classes": [
+    {
+      "name": "SemanticSearch",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize with SNOMED data path",
+          "parameters": [
+            {"name": "uk_path", "type": "str", "required": false, "default": null}
+          ]
+        },
+        {
+          "name": "search",
+          "description": "Perform comprehensive semantic search combining multiple strategies",
+          "parameters": [
+            {"name": "term_or_terms", "type": "str|list[str]", "required": true},
+            {"name": "max_concepts", "type": "int", "required": false, "default": 100},
+            {"name": "top_n_per_term", "type": "int", "required": false, "default": 50},
+            {"name": "use_hierarchy", "type": "bool", "required": false, "default": true},
+            {"name": "use_medcat", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "SearchResults",
+            "description": "Result object with metrics, cuis, terms, and concepts"
+          }
+        },
+        {
+          "name": "_generate_search_terms",
+          "description": "Generate term variants for improved recall",
+          "parameters": [
+            {"name": "term", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "list[str]",
+            "description": "List of related search term variants"
+          }
+        },
+        {
+          "name": "_term_lookup_search",
+          "description": "Internal method for term matching using SnomedTermLookup",
+          "parameters": [
+            {"name": "lookup", "type": "SnomedTermLookup", "required": true},
+            {"name": "terms", "type": "list[str]", "required": true}
+          ],
+          "returns": {
+            "type": "set[tuple]",
+            "description": "Set of (cui, term) matching tuples"
+          }
+        },
+        {
+          "name": "_hierarchy_expansion",
+          "description": "Internal method for hierarchy-based expansion",
+          "parameters": [
+            {"name": "cui_list", "type": "list[str]", "required": true},
+            {"name": "max_concepts", "type": "int", "required": false, "default": 100}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[str]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "_medcat_expansion",
+          "description": "Internal method for MedCAT semantic similarity expansion",
+          "parameters": [
+            {"name": "cui_list", "type": "list[str]", "required": true},
+            {"name": "context_type", "type": "str", "required": false, "default": "long"},
+            {"name": "topn", "type": "int", "required": false, "default": 30}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[str]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "_combine_results",
+          "description": "Internal method to merge results from different search strategies",
+          "parameters": [
+            {"name": "term_matches", "type": "set[tuple]", "required": true},
+            {"name": "codes", "type": "list[str]", "required": true},
+            {"name": "names", "type": "list[str]", "required": true}
+          ],
+          "returns": {
+            "type": "dict",
+            "description": "Dictionary mapping CUI to preferred name"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchResults",
+      "description": "Container for search results with multiple access patterns",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize with concepts dict and metrics",
+          "parameters": [
+            {"name": "concepts", "type": "dict[str, str]", "required": true},
+            {"name": "metrics", "type": "dict", "required": true}
+          ]
+        },
+        {
+          "name": "concepts",
+          "description": "Dictionary mapping CUI to concept name",
+          "returns": {
+            "type": "dict"
+          }
+        },
+        {
+          "name": "cuis",
+          "description": "Sorted list of CUIs",
+          "returns": {
+            "type": "list[str]"
+          }
+        },
+        {
+          "name": "terms",
+          "description": "List of concept names in CUI order",
+          "returns": {
+            "type": "list[str]"
+          }
+        },
+        {
+          "name": "metrics",
+          "description": "Search metrics including counts and configuration",
+          "returns": {
+            "type": "dict"
+          }
+        },
+        {
+          "name": "get_cui_to_term_dict",
+          "description": "Return concepts dictionary snapshot",
+          "returns": {
+            "type": "dict"
+          }
+        },
+        {
+          "name": "get_core_concepts",
+          "description": "Get concepts that matched the base search term",
+          "parameters": [
+            {"name": "base_term", "type": "str", "required": false, "default": null}
+          ],
+          "returns": {
+            "type": "list[tuple]",
+            "description": "List of (cui, name) tuples for core concepts"
+          }
+        },
+        {
+          "name": "get_expanded_concepts",
+          "description": "Get concepts expanded via hierarchy instead of direct matching",
+          "parameters": [
+            {"name": "base_term", "type": "str", "required": false, "default": null}
+          ],
+          "returns": {
+            "type": "list[tuple]",
+            "description": "List of (cui, name) tuples for expanded concepts"
+          }
+        },
+        {
+          "name": "__len__",
+          "description": "Return total number of concepts in results",
+          "returns": {
+            "type": "int"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "expand_concepts",
+      "description": "Convenience function wrapper for SemanticSearch.search()",
+      "parameters": [
+        {"name": "term_or_terms", "type": "str|list[str]", "required": true},
+        {"name": "uk_path", "type": "str", "required": false, "default": null},
+        {"name": "max_concepts", "type": "int", "required": false, "default": 100},
+        {"name": "top_n_per_term", "type": "int", "required": false, "default": 50},
+        {"name": "use_hierarchy", "type": "bool", "required": false, "default": true},
+        {"name": "use_medcat", "type": "bool", "required": false, "default": false}
+      ],
+      "returns": {
+        "type": "SearchResults"
+      }
+    }
+  ],
+  "example_usage": [
+    "from semantic_expansion import SemanticSearch, expand_concepts",
+    "# Initialize and search",
+    "searcher = SemanticSearch(uk_path='/path/to/snomed')",
+    "results = searcher.search('meningioma', max_concepts=500)",
+    "# Access results in different formats",
+    "cuis = results.cuis  # List of CUIs",
+    "terms = results.terms  # List of names",
+    "concepts = results.concepts  # Dict mapping cui -> name",
+    "metrics = results.metrics  # Search statistics",
+    "# Get core vs expanded concepts",
+    "core = results.get_core_concepts('meningioma')",
+    "expanded = results.get_expanded_concepts('meningioma')",
+    "# With MedCAT for semantic similarity",
+    "results_with_medcat = searcher.search('meningioma', use_medcat=True)",
+    "# Use convenience function",
+    "simple_results = expand_concepts(['brain tumor', 'neoplasm'], max_concepts=200)"
+  ]
+}

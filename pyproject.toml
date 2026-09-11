@@ -42,12 +42,21 @@ dev = [
     "black[jupyter]>=24.0.0",
     "ruff>=0.8.0",
     "mypy>=1.0.0",
-    "pre-commit"
+    "pre-commit",
+]
+docs = [
+    "sphinx>=8.0.0",
+    "furo>=2024.0.0",
+    "sphinx-autodoc-typehints>=1.5.0",
 ]
 medcat = [
     "medcat>=1.5.0,<2.0.0",
     "transformers<5.0.0",
     "sentence-transformers<5.0.0",
+]
+
+all = [
+    "snomed-methods[dev,docs,medcat]",
 ]
 
 [project.scripts]

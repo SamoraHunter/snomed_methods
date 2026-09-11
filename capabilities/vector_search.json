@@ -1,0 +1,109 @@
+{
+  "name": "Vector Similarity Search",
+  "version": "1.0",
+  "category": "search",
+  "description": "FAISS-based fast similarity search for clinical concept embeddings",
+  "classes": [
+    {
+      "name": "ConceptVectorSearch",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize with pre-computed embeddings and optional embedder",
+          "parameters": [
+            {"name": "embeddings_dict_or_path", "type": "dict|str", "required": true},
+            {"name": "cui_to_name", "type": "dict[str, str]", "required": false, "default": null},
+            {"name": "embedder", "type": "ClinicalConceptEmbedder", "required": false, "default": null}
+          ]
+        },
+        {
+          "name": "load_embeddings_from_file",
+          "description": "Static method to load embeddings from disk",
+          "parameters": [
+            {"name": "path", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "dict[str, numpy.ndarray]",
+            "description": "Dictionary mapping CUI to embedding vector"
+          }
+        },
+        {
+          "name": "build_index",
+          "description": "Build FAISS index from loaded embeddings",
+          "parameters": [
+            {"name": "index_type", "type": "str", "required": false, "default": "FlatIP", "choices": ["FlatIP", "HNSW"]}
+          ]
+        },
+        {
+          "name": "search",
+          "description": "Search for similar concepts using query text or embedding",
+          "parameters": [
+            {"name": "query_text", "type": "str", "required": false, "default": null},
+            {"name": "query_embedding", "type": "numpy.ndarray", "required": false, "default": null},
+            {"name": "top_k", "type": "int", "required": false, "default": 20}
+          ],
+          "returns": {
+            "type": "list[tuple]",
+            "description": "List of (cui, concept_name, similarity_score) tuples"
+          }
+        },
+        {
+          "name": "_get_query_embedding",
+          "description": "Internal method to generate embedding for query string",
+          "parameters": [
+            {"name": "query_text", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "numpy.ndarray|null",
+            "description": "Query embedding vector or None if failed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "_load_embeddings_from_file",
+      "description": "Load embeddings from .pkl or .npz files with format detection"
+    },
+    {
+      "name": "build_index",
+      "description": "Build FAISS index (FlatIP for exact, HNSW for approximate search)"
+    }
+  ],
+  "index_types": [
+    {
+      "name": "FlatIP",
+      "description": "Exact inner product search with L2-normalized vectors (cosine similarity)",
+      "complexity": "O(n)",
+      "memory": "High (stores all embeddings in memory)",
+      "speed": "Slow for large datasets, exact results",
+      "use_case": "Small to medium datasets where exact results are required"
+    },
+    {
+      "name": "HNSW",
+      "description": "Hierarchical Navigable Small World - approximate nearest neighbor search",
+      "complexity": "O(log n)",
+      "memory": "Medium (additional graph structure)",
+      "speed": "Fast even for large datasets",
+      "use_case": "Large datasets where approximate results are acceptable"
+    }
+  ],
+  "example_usage": [
+    "from llm_concept_embedder import ConceptVectorSearch, load_embeddings_from_file",
+    "# Load embeddings from file or dict",
+    "search_engine = ConceptVectorSearch(",
+    "    embeddings_dict_or_path='./outputs/concept_embeddings.pkl',",
+    "    cui_to_name={cui: name for cui, name in concept_data}",
+    ")",
+    "# Build FAISS index",
+    "search_engine.build_index(index_type='FlatIP')  # or 'HNSW' for approximate",
+    "# Search using query text (automatically embeds the query)",
+    "results = search_engine.search(query_text='brain tumor', top_k=20)",
+    "# Search using pre-computed embedding",
+    "import numpy as np",
+    "query_embedding = np.random.randn(384)  # Example: 384-dim embeddings",
+    "results = search_engine.search(query_embedding=query_embedding, top_k=10)",
+    "# Access results",
+    "for cui, name, score in results:",
+    "    print(f'{cui}: {name} (similarity: {score:.4f})')"
+  ]
+}

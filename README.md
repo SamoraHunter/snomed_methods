@@ -6,6 +6,7 @@ A Python library for working with SNOMED CT (Systematized Nomenclature of Medici
 
 - [Quick Start](#quick-start) - Installation and basic usage
 - [Features](#features) - Library capabilities
+- [Concept Embeddings](#concept-embeddings) - LLM-based semantic embeddings
 - [Repository Structure](#repository-structure) - File organization
 - [Development](#development) - Testing and code quality
 
@@ -57,24 +58,80 @@ codes, names = relations.expand_codes(
 - **Code Expansion**: Automatically expand concept codes through recursive hierarchy traversal
 - **MedCAT Integration**: Combine MedCAT entity recognition with SNOMED CT terminology
 - **Snowstorm API Support**: Access remote Snowstorm terminology server API
+- **Concept Embeddings**: LLM-based semantic embeddings using Hugging Face Transformers models and Ollama
 
-## Repository Structure
+## Concept Embeddings
 
+The `llm_concept_embedder` module provides LLM-based semantic embeddings for biomedical concepts.
+
+### Features
+
+- **Local Hugging Face Transformers Models**: Load models like SapBERT directly from local storage
+- **Ollama Backend**: Use remote Ollama instances for inference
+- **FAISS Vector Search**: Efficient similarity search with FAISS index building
+- **Batch Processing**: Generate embeddings in configurable batch sizes with checkpoint support
+
+### Supported Backends
+
+| Backend | Description | Example |
+|---------|-------------|---------|
+| `transformers` | Direct Hugging Face Transformers models (e.g., SapBERT, BioBERT) | ClinicalConceptEmbedder(model_path="path/to/model", backend="transformers") |
+| `hf` | SentenceTransformer models | ClinicalConceptEmbedder(model_name="all-MiniLM-L6-v2", backend="hf") |
+| `ollama` | Ollama API server | ClinicalConceptEmbedder(model_name="qwen2.5-coder", backend="ollama", ollama_base_url="http://localhost:11434") |
+
+### Example Usage
+
+```python
+from llm_concept_embedder import (
+    ClinicalConceptEmbedder,
+    load_concepts_from_medcat,
+    ConceptVectorSearch
+)
+
+# Initialize embedder with local SapBERT model
+embedder = ClinicalConceptEmbedder(
+    model_name_or_path="/workspaces/snomed_methods/embedding_models/SapBERT-from-PubMedBERT-fulltext",
+    backend="transformers",
+    device="cpu"
+)
+
+# Load concepts from MedCAT CDB
+cat = CAT.load_model_pack("model_pack.zip")
+concept_df = load_concepts_from_medcat(cat)
+
+# Generate embeddings
+embeddings = embedder.generate_embeddings(
+    concept_texts=embedder.prepare_concept_text(concept_df),
+    batch_size=32
+)
+
+# Create embedding dictionary and search engine
+cui_to_embedding = {}
+for i, row in enumerate(concept_df.itertuples()):
+    cui_to_embedding[row.cui] = embeddings[i]
+
+search_engine = ConceptVectorSearch(
+    {'embeddings': cui_to_embedding, 'names': cat.cdb.cui2preferred_name},
+    embedder=embedder
+)
+search_engine.build_index(index_type="FlatIP")
+
+# Query for similar concepts
+results = search_engine.search("meningioma", top_k=10)
 ```
-snomed_methods/
-├── snomed_methods_v1.py          # Core SNOMED operations class
-├── pyproject.toml                # Package configuration and dependencies
-├── setup/                        # Installation scripts
-│   ├── install.py                # Python-based installer
-│   └── install.sh                # Bash installer (Linux/Mac)
-└── tests/                        # Unit and integration tests
-    ├── unit/
-    │   ├── test_snomed_relations.py
-    │   ├── test_snomed_term_lookup.py
-    │   └── test_setup_install.py
-    └── integration/
-        └── test_integration.py
+
+### Model Configuration
+
+To use the local SapBERT model included in this repository:
+
+```python
+embedder = ClinicalConceptEmbedder(
+    model_name_or_path="/workspaces/snomed_methods/embedding_models/SapBERT-from-PubMedBERT-fulltext",
+    backend="transformers",
+    device="cpu"
+)
 ```
+
 
 ## Requirements
 
@@ -105,5 +162,3 @@ ruff check .
 ```
 
 ## License
-
-This project is provided as-is for educational and development purposes.

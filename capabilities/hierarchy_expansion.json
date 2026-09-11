@@ -1,0 +1,166 @@
+{
+  "name": "Hierarchy Expansion",
+  "version": "1.0",
+  "category": "expansion",
+  "description": "Expand concept hierarchies by traversing parent-child relationships in SNOMED CT",
+  "classes": [
+    {
+      "name": "SnomedRelations",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize with relationship data and optional MedCAT model",
+          "parameters": [
+            {"name": "medcat", "type": "bool", "required": false, "default": false},
+            {"name": "snowstorm", "type": "bool", "required": false, "default": false},
+            {"name": "snomed_rf2_full_path", "type": "str", "required": false, "default": null}
+          ]
+        },
+        {
+          "name": "get_children",
+          "description": "Get direct child concepts for a given concept ID",
+          "parameters": [
+            {"name": "cui", "type": "int|str", "required": true}
+          ],
+          "returns": {
+            "type": "list[int]",
+            "description": "List of child concept IDs"
+          }
+        },
+        {
+          "name": "get_parents",
+          "description": "Get direct parent concepts for a given concept ID",
+          "parameters": [
+            {"name": "cui", "type": "int|str", "required": true}
+          ],
+          "returns": {
+            "type": "list[int]",
+            "description": "List of parent concept IDs"
+          }
+        },
+        {
+          "name": "expand_codes",
+          "description": "Expand hierarchy from a root concept in both directions",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple with expanded concepts"
+          }
+        },
+        {
+          "name": "expand_codes_local",
+          "description": "Local expansion using SNOMED RF2 relationship data",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "expand_codes_snowstorm",
+          "description": "Expand via Snowstorm REST API",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "recursive_code_expansion",
+          "description": "Multi-level recursive hierarchy expansion",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "n_recursion", "type": "int", "required": false, "default": 3},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple with recursively expanded concepts"
+          }
+        },
+        {
+          "name": "expand_codes_children_local",
+          "description": "Expand only children (descendants)",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "expand_codes_parents_local",
+          "description": "Expand only parents (ancestors)",
+          "parameters": [
+            {"name": "filter_root_cui", "type": "int|str", "required": true},
+            {"name": "debug", "type": "bool", "required": false, "default": false}
+          ],
+          "returns": {
+            "type": "tuple",
+            "item_types": ["list[int]", "list[str]"],
+            "description": "(codes, names) tuple"
+          }
+        },
+        {
+          "name": "get_pretty_name",
+          "description": "Get preferred name for a concept (requires MedCAT)",
+          "parameters": [
+            {"name": "cui", "type": "int|str", "required": true}
+          ],
+          "returns": {
+            "type": "str|null",
+            "description": "Preferred concept name or None if not available"
+          }
+        },
+        {
+          "name": "get_pretty_name_list",
+          "description": "Get preferred names for a list of concepts",
+          "parameters": [
+            {"name": "cui_list", "type": "list[int|str]", "required": true}
+          ],
+          "returns": {
+            "type": "list[str]",
+            "description": "List of preferred names"
+          }
+        },
+        {
+          "name": "has_medcat",
+          "description": "Check if MedCAT model is available",
+          "parameters": [],
+          "returns": {
+            "type": "bool",
+            "description": "True if MedCAT model loaded successfully"
+          }
+        }
+      ]
+    }
+  ],
+  "example_usage": [
+    "from snomed_methods_v1 import SnomedRelations",
+    "# Initialize with relationship data",
+    "relations = SnomedRelations(snomed_rf2_full_path='/path/to/relationships.txt')",
+    "# Get direct children and parents",
+    "children, child_names = relations.expand_codes_children_local(363346000)",
+    "parents, parent_names = relations.expand_codes_parents_local(363346000)",
+    "# Full expansion (both directions)",
+    "all_concepts, names = relations.expand_codes(363346000, use_snowstorm=False)",
+    "# Multi-level recursive expansion",
+    "expanded, expanded_names = relations.recursive_code_expansion(363346000, n_recursion=5)"
+  ]
+}
