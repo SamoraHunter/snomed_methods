@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-from typing import List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -713,3 +713,131 @@ class SnomedRelations:
                 names.append(preferred_term)
 
         return codes, names
+
+    def get_subsumed_concepts(
+        self,
+        cui,
+        semantic_tags: List[str] | None = None,
+        max_depth: int = 10,
+        active_only: bool = True,
+        include_ancestors: bool = False,
+        include_descendants: bool = True,
+    ) -> Tuple[List[int], List[str]]:
+        """Calculate transitive closure over is_a relationships to retrieve
+        entire active DAG subgraph for a concept.
+
+        Args:
+            cui: Root concept ID to start traversal from.
+            semantic_tags: List of semantic tags to filter by (e.g., ['disorder',
+                          'finding']). If None, no filtering applied.
+            max_depth: Maximum recursion depth.
+            active_only: Only include active concepts and relationships.
+            include_ancestors: Whether to traverse upward (parents).
+            include_descendants: Whether to traverse downward (children).
+
+        Returns:
+            Tuple of (concept_ids, concept_names) lists.
+        """
+        try:
+            cui = int(cui)
+        except (ValueError, TypeError):
+            return [], []
+
+        if max_depth < 0:
+            return [], []
+
+        visited_concepts, all_concepts, depth_map = self._subsumed_traverse(
+            cui,
+            max_depth=max_depth,
+            active_only=active_only,
+            include_ancestors=include_ancestors,
+            include_descendants=include_descendants,
+        )
+
+        concept_ids = list(set(all_concepts))
+
+        if semantic_tags and self.has_medcat():
+            concept_ids = self._filter_by_semantic_tags(concept_ids, semantic_tags)
+
+        concept_names = self.get_pretty_name_list(concept_ids)
+
+        return concept_ids, concept_names
+
+    def _subsumed_traverse(
+        self,
+        cui: int,
+        max_depth: int,
+        active_only: bool,
+        include_ancestors: bool,
+        include_descendants: bool,
+    ) -> Tuple[Set[int], List[int], Dict[int, int]]:
+        """Traverse the DAG and return visited concepts."""
+        visited_concepts = set()
+        all_concepts = [cui]
+        depth_map = {cui: 0}
+
+        def traverse(concept_id: int, depth: int):
+            if depth > max_depth or concept_id in visited_concepts:
+                return
+
+            visited_concepts.add(concept_id)
+            all_concepts.append(concept_id)
+            depth_map[concept_id] = depth
+
+            df = self._get_active_df() if active_only else self.df
+            type_id = 116680003
+
+            children_df = (
+                df[(df["destinationId"] == concept_id) & (df["typeId"] == type_id)]
+                if include_descendants
+                else pd.DataFrame()
+            )
+
+            parents_df = (
+                df[(df["sourceId"] == concept_id) & (df["typeId"] == type_id)]
+                if include_ancestors
+                else pd.DataFrame()
+            )
+
+            next_level_df = pd.concat([children_df, parents_df])
+
+            if not next_level_df.empty:
+                for _, row in next_level_df.iterrows():
+                    # For children: destinationId is the parent, sourceId is the child
+                    # For parents: sourceId is the child, destinationId is the parent
+                    if "sourceId" in row and "destinationId" in row:
+                        if include_descendants and row["destinationId"] == concept_id:
+                            child_id = int(row["sourceId"])
+                        elif include_ancestors and row["sourceId"] == concept_id:
+                            child_id = int(row["destinationId"])
+                        else:
+                            child_id = (
+                                int(row["sourceId"])
+                                if include_descendants
+                                else int(row["destinationId"])
+                            )
+                    else:
+                        child_id = int(row.get("sourceId") or row.get("destinationId"))
+                    traverse(child_id, depth + 1)
+
+        traverse(cui, 0)
+        return visited_concepts, all_concepts, depth_map
+
+    def _get_active_df(self) -> pd.DataFrame:
+        """Get active relationships dataframe."""
+        if "active" in self.df.columns:
+            return self.df[(self.df["active"] == "1") | (self.df["active"] == 1)]
+        return self.df
+
+    def _filter_by_semantic_tags(
+        self, concept_ids: List[int], semantic_tags: List[str]
+    ) -> List[int]:
+        """Filter concepts by semantic tags."""
+        filtered_ids = []
+        for cid in concept_ids:
+            name = self.get_pretty_name(cid)
+            if name is not None:
+                name_lower = name.lower()
+                if any(tag.lower() in name_lower for tag in semantic_tags):
+                    filtered_ids.append(cid)
+        return filtered_ids

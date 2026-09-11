@@ -346,18 +346,21 @@ class SemanticSearch:
             search_terms = list(term_or_terms)
             base_term = "_".join(search_terms[:2])
 
-        print(f"{'='*60}")
-        print("SEMANTIC EXPANSION SEARCH")
-        print(f"{'='*60}")
-        print(f"\nInput term(s): {search_terms}")
-        print("Configuration:")
-        print(f"  - max_concepts: {max_concepts}")
-        print(f"  - top_n_per_term: {top_n_per_term}")
-        print(f"  - use_hierarchy: {use_hierarchy}")
-        print(f"  - use_medcat: {use_medcat}")
+        log_messages = []
+        log_messages.append(f"{'='*60}")
+        log_messages.append("SEMANTIC EXPANSION SEARCH")
+        log_messages.append(f"{'='*60}")
+        log_messages.append(f"\nInput term(s): {search_terms}")
+        log_messages.append("Configuration:")
+        log_messages.append(f"  - max_concepts: {max_concepts}")
+        log_messages.append(f"  - top_n_per_term: {top_n_per_term}")
+        log_messages.append(f"  - use_hierarchy: {use_hierarchy}")
+        log_messages.append(f"  - use_medcat: {use_medcat}")
 
-        print("\n[Step 1] Term Matching")
-        print("        Searching for descriptions containing search terms...")
+        log_messages.append("\n[Step 1] Term Matching")
+        log_messages.append(
+            "        Searching for descriptions containing search terms..."
+        )
         if importlib.util.find_spec("snomed_term_lookup") is None:
             raise ImportError(
                 "snomed-term-lookup package required. Install with: pip install snomed-term-lookup"
@@ -369,30 +372,36 @@ class SemanticSearch:
         term_matches = self._term_lookup_search(
             lookup, search_terms, top_n_per_term=top_n_per_term
         )
-        print(f"        Found {len(term_matches)} concepts via term matching")
+        log_messages.append(
+            f"        Found {len(term_matches)} concepts via term matching"
+        )
 
         cui_list = [str(c) for c, _ in term_matches]
 
         hierarchy_codes, hierarchy_names = [], []
         if use_hierarchy:
-            print("\n[Step 2] Hierarchy Expansion")
-            print("        Traversing parent-child relationships...")
+            log_messages.append("\n[Step 2] Hierarchy Expansion")
+            log_messages.append("        Traversing parent-child relationships...")
             hierarchy_codes, hierarchy_names = self._hierarchy_expansion(
                 cui_list, max_concepts=max_concepts
             )
-            print(f"        Found {len(hierarchy_codes)} concepts via hierarchy")
+            log_messages.append(
+                f"        Found {len(hierarchy_codes)} concepts via hierarchy"
+            )
 
         medcat_codes, medcat_names = [], []
         if use_medcat:
-            print("\n[Step 3] MedCAT Semantic Expansion")
-            print("        Finding semantically similar concepts...")
+            log_messages.append("\n[Step 3] MedCAT Semantic Expansion")
+            log_messages.append("        Finding semantically similar concepts...")
             medcat_codes, medcat_names = self._medcat_expansion(
                 cui_list, context_type="long", topn=30
             )
             if not medcat_codes:
-                print("        MedCAT not available - skipping")
+                log_messages.append("        MedCAT not available - skipping")
             else:
-                print(f"        Found {len(medcat_codes)} concepts via MedCAT")
+                log_messages.append(
+                    f"        Found {len(medcat_codes)} concepts via MedCAT"
+                )
 
         combined = self._combine_results(
             term_matches, hierarchy_codes + medcat_codes, hierarchy_names + medcat_names
@@ -401,12 +410,12 @@ class SemanticSearch:
         core_count = sum(1 for name in combined.values() if base_term in name.lower())
         expanded_count = len(combined) - core_count
 
-        print(f"\n{'='*60}")
-        print("SEARCH COMPLETE")
-        print(f"{'='*60}")
-        print(f"Total concepts: {len(combined)}")
-        print(f"  - Core (matches input): {core_count}")
-        print(f"  - Expanded (related): {expanded_count}")
+        log_messages.append(f"\n{'='*60}")
+        log_messages.append("SEARCH COMPLETE")
+        log_messages.append(f"{'='*60}")
+        log_messages.append(f"Total concepts: {len(combined)}")
+        log_messages.append(f"  - Core (matches input): {core_count}")
+        log_messages.append(f"  - Expanded (related): {expanded_count}")
 
         return SearchResults(
             concepts=combined,
@@ -461,7 +470,7 @@ class SearchResults:
         return list(self._concepts.items())
 
     def get_expanded_concepts(self, base_term: str = None) -> List[Tuple[str, str]]:
-        core = set(c for c, _ in self.get_core_concepts(base_term))
+        core = {c for c, _ in self.get_core_concepts(base_term)}
         return [(cui, name) for cui, name in self._concepts.items() if cui not in core]
 
     def __len__(self) -> int:
@@ -511,7 +520,3 @@ def expand_concepts(
 
 if __name__ == "__main__":
     results = expand_concepts("meningioma", max_concepts=50)
-    print(f"\n{results}")
-    print(f"\nCUIs ({len(results.cuis)}):")
-    for cui in results.cuis:
-        print(cui)

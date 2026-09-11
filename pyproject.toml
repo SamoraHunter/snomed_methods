@@ -53,7 +53,7 @@ snomed-methods = "snomed_methods_v1:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["snomed_methods_v1.py"]
+include = ["snomed_methods_v1.py", "snomed_term_lookup.py"]
 
 [tool.black]
 line-length = 88
@@ -63,7 +63,7 @@ skip-string-normalization = true
 [tool.ruff]
 line-length = 88
 target-version = "py38"
-select = [
+lint.select = [
     "A",
     "B",
     "C",
@@ -79,12 +79,13 @@ select = [
     "W",
     "YTT",
 ]
-ignore = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"semantic_expansion.py" = ["C401", "C901", "E501", "T201", "B028"]
-
+"semantic_expansion.py" = ["C901", "B028", "E501"]
+"**/*.ipynb" = ["T201", "E402", "A004", "B007", "F821"]
+"test_*.py" = ["T201", "E501"]
+"validate_notebooks.py" = ["C901", "T201"]
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true

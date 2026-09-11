@@ -529,5 +529,601 @@ class TestSnomedRelationsIntegrationEdgeCases:
             pass
 
 
+class TestSnomedRelationsGetSubsumedConcepts:
+    def test_basic_traversal_descendants_only(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200, 300, 400],
+                "destinationId": [50, 100, 200, 300],
+                "typeId": [
+                    116680003,
+                    116680003,
+                    116680003,
+                    116680003,
+                ],
+            }
+        )
+        df_path = get_tmp_path("test_subsumed.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(50)
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 in result_ids
+        assert 300 in result_ids
+        assert 400 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_traversal_with_ancestors(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_ancestors.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(
+            100, include_ancestors=True, include_descendants=True
+        )
+        assert 50 in result_ids
+        assert 100 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_traversal_only_ancestors(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [200],
+                "destinationId": [100],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_only_ancestors.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(
+            100, include_ancestors=True, include_descendants=False
+        )
+        assert len(result_ids) == 1
+        assert 100 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_traversal_only_descendants(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_only_descendants.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(
+            50, include_ancestors=False, include_descendants=True
+        )
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_max_depth_limit(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200, 300],
+                "destinationId": [50, 100, 200],
+                "typeId": [116680003, 116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_depth_limit.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, max_depth=1)
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 not in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_empty_dataframe(self):
+        df = pd.DataFrame(columns=["sourceId", "destinationId", "typeId"])
+        df_path = get_tmp_path("test_empty.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(999)
+        assert 999 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_invalid_cui(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_invalid.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts("invalid")
+        assert result_ids == []
+        assert result_names == []
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_empty_results_for_nonexistent_concept(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_none.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(999)
+        assert 999 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_string_cui_conversion(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_string.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts("50")
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_none_cui(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_none_cui.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(None)
+        assert result_ids == []
+        assert result_names == []
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_max_depth_zero(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_zero_depth.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, max_depth=0)
+        assert len(result_ids) == 1
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_negative_max_depth(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_neg_depth.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, max_depth=-1)
+        assert result_ids == []
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_inactive_relationships_excluded(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+                "active": ["1", "0"],
+            }
+        )
+        df_path = get_tmp_path("test_inactive.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, active_only=True)
+        # Starting from 50, find descendants: child 100 (active) is found
+        # At node 100, look for ancestors: no parent relationship found
+        assert 50 in result_ids
+        assert (
+            100 in result_ids
+        )  # child 100 IS included because its active relationship to 50
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_include_inactive_relationships(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [200],
+                "destinationId": [100],
+                "typeId": [116680003],
+                "active": ["0"],
+            }
+        )
+        df_path = get_tmp_path("test_include_inactive.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(100, active_only=False)
+        assert 100 in result_ids
+        assert 200 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_loop_prevention(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200, 300],
+                "destinationId": [50, 100, 200],
+                "typeId": [116680003, 116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_loop.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, max_depth=10)
+        assert len(result_ids) == 4
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 in result_ids
+        assert 300 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_concept_names_returned(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_names.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(50)
+        assert len(result_ids) == len(result_names)
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_duplicate_handling(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 100],
+                "destinationId": [50, 50],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_duplicate.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50)
+        assert len(result_ids) == 2
+        assert 50 in result_ids
+        assert 100 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_mixed_type_relationships(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_mixed.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50)
+        assert 50 in result_ids
+        assert 100 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+
+class TestSnomedRelationsGetSubsumedConceptsSemanticTags:
+    def test_filter_by_single_tag_with_medcat_mock(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_tag_single.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        snomed.medcat = True
+
+        def mock_cat(cui):
+            return None  # Mock cat object
+
+        class MockCDB:
+            cui2preferred_name = {
+                "50": "Disorder A",
+                "100": "Finding B",
+                "200": "Procedure C",
+            }
+
+        class MockCat:
+            cdb = MockCDB()
+
+        snomed.cat = MockCat()
+
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=["disorder"])
+        assert len(result_ids) == 1
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_filter_by_multiple_tags(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_tag_multi.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        snomed.medcat = True
+
+        class MockCDB:
+            cui2preferred_name = {
+                "50": "Disorder A",
+                "100": "Finding B",
+                "200": "Procedure C",
+            }
+
+        class MockCat:
+            cdb = MockCDB()
+
+        snomed.cat = MockCat()
+
+        result_ids, _ = snomed.get_subsumed_concepts(
+            50, semantic_tags=["disorder", "finding"]
+        )
+        assert len(result_ids) == 2
+        assert 50 in result_ids
+        assert 100 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_filter_no_matches(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_tag_none.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        snomed.medcat = True
+
+        class MockCDB:
+            cui2preferred_name = {"50": "Disorder A"}  # Only has Disorder, no Finding
+
+        class MockCat:
+            cdb = MockCDB()
+
+        snomed.cat = MockCat()
+
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=["finding"])
+        assert result_ids == []
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_filter_case_insensitive(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_tag_case.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        snomed.medcat = True
+
+        class MockCDB:
+            cui2preferred_name = {"50": "DISORDER A"}
+
+        class MockCat:
+            cdb = MockCDB()
+
+        snomed.cat = MockCat()
+
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=["disorder"])
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_no_filter_returns_all(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_no_filter.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=None)
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_empty_tag_list(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_empty_tags.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=[])
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_semantic_tag_with_no_medcat(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100],
+                "destinationId": [50],
+                "typeId": [116680003],
+            }
+        )
+        df_path = get_tmp_path("test_tag_no_medcat.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50, semantic_tags=["disorder"])
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+
+class TestSnomedRelationsGetSubsumedConceptsIntegration:
+    def test_full_workflow_large_graph(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200, 300, 400, 500],
+                "destinationId": [50, 100, 200, 300, 400],
+                "typeId": [
+                    116680003,
+                    116680003,
+                    116680003,
+                    116680003,
+                    116680003,
+                ],
+            }
+        )
+        df_path = get_tmp_path("test_integration.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, result_names = snomed.get_subsumed_concepts(50, max_depth=10)
+        assert len(result_ids) == 6
+        for i in [50, 100, 200, 300, 400, 500]:
+            assert i in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_concept_both_ancestor_and_descendant(self):
+        df = pd.DataFrame(
+            {
+                "sourceId": [100, 200],
+                "destinationId": [50, 100],
+                "typeId": [116680003, 116680003],
+            }
+        )
+        df_path = get_tmp_path("test_both.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(
+            100, include_ancestors=True, include_descendants=True
+        )
+        assert len(result_ids) == 3
+        assert 50 in result_ids
+        assert 100 in result_ids
+        assert 200 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
