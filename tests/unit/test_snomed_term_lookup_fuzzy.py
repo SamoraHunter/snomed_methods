@@ -6,7 +6,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from snomed_term_lookup import SnomedTermLookup
+from src.snomed_methods import SnomedTermLookup
 
 
 @pytest.fixture

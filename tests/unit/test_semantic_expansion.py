@@ -34,7 +34,7 @@ class TestSemanticSearch:
 
     def test_init_without_path(self):
         """Test initialization without providing UK path."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -42,7 +42,7 @@ class TestSemanticSearch:
 
     def test_init_with_custom_path(self):
         """Test initialization with custom UK path."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch(uk_path="/custom/path")
 
@@ -50,7 +50,7 @@ class TestSemanticSearch:
 
     def test_generate_search_terms_basic(self):
         """Test basic search term generation."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -61,7 +61,7 @@ class TestSemanticSearch:
 
     def test_generate_search_terms_duplicates(self):
         """Test that duplicate terms are removed."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -72,7 +72,7 @@ class TestSemanticSearch:
 
     def test_generate_search_terms_variants(self):
         """Test that all expected variants are generated."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -83,8 +83,11 @@ class TestSemanticSearch:
 
     def test_term_lookup_search_basic(self):
         """Test basic term lookup search."""
-        with patch("semantic_expansion.importlib.util.find_spec", return_value=True):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             searcher = SemanticSearch()
 
@@ -101,8 +104,11 @@ class TestSemanticSearch:
 
     def test_term_lookup_search_no_package(self):
         """Test term lookup search when package not available."""
-        with patch("semantic_expansion.importlib.util.find_spec", return_value=False):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=False,
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             searcher = SemanticSearch()
 
@@ -113,9 +119,12 @@ class TestSemanticSearch:
     def test_hierarchy_expansion_basic(self):
         """Test basic hierarchy expansion."""
         with patch(
-            "semantic_expansion.importlib.util.find_spec", return_value=True
-        ), patch("snomed_term_lookup.create_term_lookup_from_directory") as mock_lookup:
-            from semantic_expansion import SemanticSearch
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory"
+        ) as mock_lookup:
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             mock_lookup.return_value = mock_lookup_instance
@@ -128,7 +137,7 @@ class TestSemanticSearch:
 
     def test_hierarchy_expansion_file_not_found(self):
         """Test hierarchy expansion when relationship file not found."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch(uk_path="/test/path")
 
@@ -140,13 +149,14 @@ class TestSemanticSearch:
     def test_hierarchy_expansion_read_error(self):
         """Test hierarchy expansion when CSV read fails."""
         with patch(
-            "semantic_expansion.importlib.util.find_spec", return_value=True
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
         ), patch("pandas.read_csv") as mock_read:
-            from semantic_expansion import SemanticSearch
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             with patch(
-                "snomed_term_lookup.create_term_lookup_from_directory",
+                "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory",
                 return_value=mock_lookup_instance,
             ):
                 mock_read.side_effect = Exception("Read error")
@@ -161,9 +171,12 @@ class TestSemanticSearch:
     def test_medcat_expansion_basic(self):
         """Test basic MedCAT expansion."""
         with patch(
-            "semantic_expansion.importlib.util.find_spec", return_value=True
-        ), patch("snomed_methods_v1.SnomedRelations") as mock_relations_cls:
-            from semantic_expansion import SemanticSearch
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_methods_v1.SnomedRelations"
+        ) as mock_relations_cls:
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_rel_instance = MagicMock()
             mock_rel_instance.has_medcat.return_value = True
@@ -180,8 +193,11 @@ class TestSemanticSearch:
 
     def test_medcat_expansion_no_package(self):
         """Test MedCAT expansion when package not available."""
-        with patch("semantic_expansion.importlib.util.find_spec", return_value=False):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=False,
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             searcher = SemanticSearch()
 
@@ -192,7 +208,7 @@ class TestSemanticSearch:
 
     def test_combine_results(self):
         """Test combining results from multiple methods."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -210,7 +226,7 @@ class TestSemanticSearch:
 
     def test_combine_results_none_name(self):
         """Test combine results with None name."""
-        from semantic_expansion import SemanticSearch
+        from src.snomed_methods.semantic_expansion import SemanticSearch
 
         searcher = SemanticSearch()
 
@@ -224,10 +240,15 @@ class TestSemanticSearch:
 
     def test_search_basic(self):
         """Test basic search functionality."""
-        with patch("importlib.util.find_spec", return_value=True), patch(
-            "snomed_term_lookup.create_term_lookup_from_directory"
-        ) as mock_lookup, patch("os.path.exists", return_value=False):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory"
+        ) as mock_lookup, patch(
+            "os.path.exists", return_value=False
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             mock_lookup_instance.find_concepts_by_term.return_value = [
@@ -244,10 +265,15 @@ class TestSemanticSearch:
 
     def test_search_with_hierarchy_disabled(self):
         """Test search with hierarchy expansion disabled."""
-        with patch("importlib.util.find_spec", return_value=True), patch(
-            "snomed_term_lookup.create_term_lookup_from_directory"
-        ) as mock_lookup, patch("os.path.exists", return_value=False):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory"
+        ) as mock_lookup, patch(
+            "os.path.exists", return_value=False
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             mock_lookup_instance.find_concepts_by_term.return_value = [
@@ -263,12 +289,15 @@ class TestSemanticSearch:
 
     def test_search_with_medcat_enabled(self):
         """Test search with MedCAT enabled."""
-        with patch("importlib.util.find_spec", return_value=True), patch(
-            "snomed_term_lookup.create_term_lookup_from_directory"
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory"
         ) as mock_lookup, patch(
-            "snomed_methods_v1.SnomedRelations"
+            "src.snomed_methods.snomed_methods_v1.SnomedRelations"
         ) as mock_relations_cls:
-            from semantic_expansion import SemanticSearch
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             mock_lookup.return_value = mock_lookup_instance
@@ -285,10 +314,15 @@ class TestSemanticSearch:
 
     def test_search_metrics(self):
         """Test search returns correct metrics."""
-        with patch("importlib.util.find_spec", return_value=True), patch(
-            "snomed_term_lookup.create_term_lookup_from_directory"
-        ) as mock_lookup, patch("os.path.exists", return_value=False):
-            from semantic_expansion import SemanticSearch
+        with patch(
+            "src.snomed_methods.semantic_expansion.importlib.util.find_spec",
+            return_value=True,
+        ), patch(
+            "src.snomed_methods.snomed_term_lookup.create_term_lookup_from_directory"
+        ) as mock_lookup, patch(
+            "os.path.exists", return_value=False
+        ):
+            from src.snomed_methods.semantic_expansion import SemanticSearch
 
             mock_lookup_instance = MagicMock()
             mock_lookup_instance.find_concepts_by_term.return_value = [
@@ -311,7 +345,7 @@ class TestSearchResults:
 
     def test_results_init(self):
         """Test SearchResults initialization."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {"1001": "Meningioma"}
         metrics = {"total": 1}
@@ -322,7 +356,7 @@ class TestSearchResults:
 
     def test_results_cuis(self):
         """Test SearchResults cuis property."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {
             "2002": "Glioblastoma",
@@ -337,7 +371,7 @@ class TestSearchResults:
 
     def test_results_terms(self):
         """Test SearchResults terms property."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {
             "1001": "Meningioma",
@@ -352,7 +386,7 @@ class TestSearchResults:
 
     def test_results_metrics(self):
         """Test SearchResults metrics property."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         metrics = {"total": 5, "core_concepts": 3}
         results = SearchResults(concepts={}, metrics=metrics)
@@ -363,7 +397,7 @@ class TestSearchResults:
 
     def test_get_cui_to_term_dict(self):
         """Test get_cui_to_term_dict method."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {"1001": "Meningioma"}
         results = SearchResults(concepts=concepts, metrics={})
@@ -374,7 +408,7 @@ class TestSearchResults:
 
     def test_get_core_concepts(self):
         """Test get_core_concepts method."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {
             "1001": "Meningioma",
@@ -391,7 +425,7 @@ class TestSearchResults:
 
     def test_get_expanded_concepts(self):
         """Test get_expanded_concepts method."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         concepts = {
             "1001": "Meningioma",
@@ -408,7 +442,7 @@ class TestSearchResults:
 
     def test_results_len(self):
         """Test SearchResults __len__ method."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         results = SearchResults(concepts={"1001": "Meningioma"}, metrics={})
 
@@ -416,7 +450,7 @@ class TestSearchResults:
 
     def test_results_repr(self):
         """Test SearchResults __repr__ method."""
-        from semantic_expansion import SearchResults
+        from src.snomed_methods.semantic_expansion import SearchResults
 
         results = SearchResults(
             concepts={"1001": "Meningioma"},
@@ -433,8 +467,10 @@ class TestExpandConcepts:
 
     def test_expand_concepts_function(self):
         """Test expand_concepts function wrapper."""
-        with patch("semantic_expansion.SemanticSearch") as mock_searcher_cls:
-            from semantic_expansion import expand_concepts
+        with patch(
+            "src.snomed_methods.semantic_expansion.SemanticSearch"
+        ) as mock_searcher_cls:
+            from src.snomed_methods.semantic_expansion import expand_concepts
 
             mock_instance = MagicMock()
             mock_instance.search.return_value = MagicMock()

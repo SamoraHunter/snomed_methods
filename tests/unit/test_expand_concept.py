@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, "..")
 
-from snomed_term_lookup import SnomedTermLookup
+from src.snomed_methods import SnomedTermLookup
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)

@@ -74,7 +74,7 @@ def main():
     notebooks_dir = project_root / "notebooks"
 
     if not notebooks_dir.exists():
-        print(f"Notebooks directory not found: {notebooks_dir}")
+        sys.stdout.write(f"Notebooks directory not found: {notebooks_dir}\n")
         sys.exit(1)
 
     # Check if venv exists
@@ -87,48 +87,50 @@ def main():
     )
 
     if not os.path.exists(python_bin):
-        print(f"Notebook tests skipped - Python venv not found at {python_bin}")
-        print(
-            "This is expected in dev container setups without full environment setup."
+        sys.stdout.write(
+            f"Notebook tests skipped - Python venv not found at {python_bin}\n"
+        )
+        sys.stdout.write(
+            "This is expected in dev container setups without full environment setup.\n"
         )
         sys.exit(0)
 
     notebooks = sorted(notebooks_dir.glob("*.ipynb"))
 
-    print(f"Testing {len(notebooks)} notebooks...\n")
+    sys.stdout.write(f"Testing {len(notebooks)} notebooks...\n\n")
 
     results = {}
     for nb in notebooks:
         if "_executed" in nb.name or "nbconvert" in nb.name or "_tested" in nb.name:
             continue
 
-        print(f"Testing: {nb.name}")
+        sys.stdout.write(f"Testing: {nb.name}\n")
         success, errors = test_notebook(str(nb))
 
         if success:
-            print("  PASSED")
+            sys.stdout.write("  PASSED\n")
             results[nb.name] = ("passed", [])
         else:
-            print("  FAILED")
+            sys.stdout.write("  FAILED\n")
             for err in errors:
-                print(f"     Error: {err[:200]}...")
+                sys.stdout.write(f"     Error: {err[:200]}...\n")
             results[nb.name] = ("failed", errors)
 
-    print("\n" + "=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
+    sys.stdout.write("\n" + "=" * 60 + "\n")
+    sys.stdout.write("SUMMARY\n")
+    sys.stdout.write("=" * 60 + "\n")
 
     passed = sum(1 for r in results.values() if r[0] == "passed")
     failed = sum(1 for r in results.values() if r[0] == "failed")
 
-    print(f"Passed: {passed}/{len(results)}")
-    print(f"Failed: {failed}/{len(results)}")
+    sys.stdout.write(f"Passed: {passed}/{len(results)}\n")
+    sys.stdout.write(f"Failed: {failed}/{len(results)}\n")
 
     if failed > 0:
-        print("\nFailed notebooks:")
+        sys.stdout.write("\nFailed notebooks:\n")
         for name, (status, _) in results.items():
             if status == "failed":
-                print(f"  - {name}")
+                sys.stdout.write(f"  - {name}\n")
         sys.exit(1)
 
 

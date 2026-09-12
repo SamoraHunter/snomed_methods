@@ -64,8 +64,7 @@ all = [
 snomed-methods = "snomed_methods_v1:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["snomed_methods_v1.py", "snomed_term_lookup.py", "hybrid_search.py"]
+where = ["src"]
 
 [tool.black]
 line-length = 88

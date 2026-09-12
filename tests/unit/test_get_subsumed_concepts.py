@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, "..")
 
-from snomed_methods_v1 import SnomedRelations
+from src.snomed_methods import SnomedRelations
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     snomed = SnomedRelations(snomed_rf2_full_path=rel_file, medcat=False)
     print(f"Loaded {len(snomed.df)} relationships")
 
-    from snomed_term_lookup import SnomedTermLookup
+    from src.snomed_methods import SnomedTermLookup
 
     desc_file = os.path.join(fixture_dir, "descriptions_sample.txt")
     lookup = SnomedTermLookup(desc_file)

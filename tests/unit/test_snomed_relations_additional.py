@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import pytest
 
-from snomed_methods_v1 import SnomedRelations
+from src.snomed_methods import SnomedRelations
 
 
 def get_tmp_path(filename):

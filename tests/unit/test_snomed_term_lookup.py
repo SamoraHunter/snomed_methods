@@ -19,7 +19,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from snomed_term_lookup import SnomedTermLookup, create_term_lookup_from_directory
+from src.snomed_methods import SnomedTermLookup, create_term_lookup_from_directory
 
 
 @pytest.fixture

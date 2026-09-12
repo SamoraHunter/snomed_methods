@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from snomed_methods_v1 import SnomedRelations
+from src.snomed_methods.snomed_methods_v1 import SnomedRelations
 
 
 @pytest.fixture

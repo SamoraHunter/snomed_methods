@@ -59,7 +59,7 @@ class HybridSearch:
     def _init_embedder(self) -> None:
         """Initialize embedding model and search engine."""
         try:
-            from llm_concept_embedder import ClinicalConceptEmbedder
+            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             if self.model_path is not None:
                 self._embedder = ClinicalConceptEmbedder(
@@ -73,7 +73,9 @@ class HybridSearch:
     def _init_term_lookup(self) -> None:
         """Initialize term lookup module."""
         try:
-            from snomed_term_lookup import create_term_lookup_from_directory
+            from src.snomed_methods.snomed_term_lookup import (
+                create_term_lookup_from_directory,
+            )
 
             if self.uk_path is None:
                 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -92,7 +94,7 @@ class HybridSearch:
     def _init_hierarchy(self) -> None:
         """Initialize hierarchy expansion."""
         try:
-            from snomed_methods_v1 import SnomedRelations
+            from src.snomed_methods.snomed_methods_v1 import SnomedRelations
 
             if self.uk_path is None:
                 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -138,7 +140,7 @@ class HybridSearch:
 
     def _load_cached_embeddings_if_available(self) -> None:
         """Load cached embeddings from disk to avoid regeneration."""
-        from llm_concept_embedder import ConceptVectorSearch
+        from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
         if self._cui_to_embedding is not None:
             return
@@ -340,7 +342,7 @@ class HybridSearch:
                         )
                         names[cui] = name
 
-                from llm_concept_embedder import ConceptVectorSearch
+                from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
                 self.search_engine = ConceptVectorSearch(
                     {"embeddings": cui_to_embedding, "names": names},
@@ -359,7 +361,10 @@ class HybridSearch:
 
     def _get_all_embeddings(self) -> Dict[str, np.ndarray]:
         """Load or generate embeddings for all concepts."""
-        from llm_concept_embedder import ConceptVectorSearch, load_concepts_from_medcat
+        from src.snomed_methods.llm_concept_embedder import (
+            ConceptVectorSearch,
+            load_concepts_from_medcat,
+        )
 
         if self._cui_to_embedding is not None:
             return self._cui_to_embedding
