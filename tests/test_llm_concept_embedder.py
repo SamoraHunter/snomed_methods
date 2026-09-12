@@ -3,8 +3,10 @@
 
 import os
 import pickle
+import sys
 import unittest
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -34,121 +36,148 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
 
     def test_prepare_concept_text_basic(self):
         """Test basic concept text preparation."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_model.encode = MagicMock(
+                return_value=np.random.randn(2, 384).astype(np.float32)
+            )
+            mock_st.return_value = mock_model
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        texts = embedder.prepare_concept_text(self.test_concepts)
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-        self.assertEqual(len(texts), 2)
-        self.assertIn("Meningioma", texts[0])
-        self.assertIn("Concept ID: 1001", texts[0])
+            texts = embedder.prepare_concept_text(self.test_concepts)
+
+            self.assertEqual(len(texts), 2)
+            self.assertIn("Meningioma", texts[0])
+            self.assertIn("Concept ID: 1001", texts[0])
 
     def test_prepare_concept_text_with_nan(self):
         """Test handling of NaN values."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_st.return_value = mock_model
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        test_df = pd.DataFrame(
-            [
-                {
-                    "cui": "1001",
-                    "preferred_name": np.nan,
-                    "synonyms": None,
-                    "type_id": "",
-                }
-            ]
-        )
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-        texts = embedder.prepare_concept_text(test_df)
+            test_df = pd.DataFrame(
+                [
+                    {
+                        "cui": "1001",
+                        "preferred_name": np.nan,
+                        "synonyms": None,
+                        "type_id": "",
+                    }
+                ]
+            )
 
-        self.assertEqual(len(texts), 1)
-        self.assertIn("Concept ID: 1001", texts[0])
+            texts = embedder.prepare_concept_text(test_df)
+
+            self.assertEqual(len(texts), 1)
+            self.assertIn("Concept ID: 1001", texts[0])
 
     def test_prepare_concept_text_missing_cui(self):
         """Test handling of missing cui column."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_st.return_value = mock_model
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        test_df = pd.DataFrame(
-            [
-                {
-                    "concept_id": "1001",
-                    "preferred_name": "Meningioma",
-                }
-            ]
-        )
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-        texts = embedder.prepare_concept_text(test_df)
+            test_df = pd.DataFrame(
+                [
+                    {
+                        "concept_id": "1001",
+                        "preferred_name": "Meningioma",
+                    }
+                ]
+            )
 
-        self.assertEqual(len(texts), 1)
-        self.assertIn("Concept ID: 1001", texts[0])
+            texts = embedder.prepare_concept_text(test_df)
+
+            self.assertEqual(len(texts), 1)
+            self.assertIn("Concept ID: 1001", texts[0])
 
     def test_prepare_concept_text_semantic_tag(self):
         """Test semantic tag inclusion in formatted text."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_st.return_value = mock_model
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        texts = embedder.prepare_concept_text(self.test_concepts)
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-        self.assertIn("Semantic Tag: T-12", texts[1])
+            texts = embedder.prepare_concept_text(self.test_concepts)
+
+            self.assertIn("Semantic Tag: T-12", texts[1])
 
     def test_export_embeddings_pickle(self):
         """Test exporting embeddings to pickle."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_st.return_value = mock_model
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        with TemporaryDirectory() as tmpdir:
-            output_path = os.path.join(tmpdir, "test_embeddings.pkl")
-            cui_to_embedding = {
-                "1001": np.random.randn(384).astype(np.float32),
-                "2002": np.random.randn(384).astype(np.float32),
-            }
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-            embedder.export_embeddings(cui_to_embedding, output_path)
-
-            self.assertTrue(os.path.exists(output_path))
-
-    def test_export_embeddings_simple_filename(self):
-        """Test export with simple filename (no directory path)."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
-
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
-
-        with TemporaryDirectory() as tmpdir:
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(tmpdir)
-                output_path = "simple_test.pkl"
-                cui_to_embedding = {"1001": np.random.randn(384).astype(np.float32)}
+            with TemporaryDirectory() as tmpdir:
+                output_path = os.path.join(tmpdir, "test_embeddings.pkl")
+                cui_to_embedding = {
+                    "1001": np.random.randn(384).astype(np.float32),
+                    "2002": np.random.randn(384).astype(np.float32),
+                }
 
                 embedder.export_embeddings(cui_to_embedding, output_path)
 
                 self.assertTrue(os.path.exists(output_path))
-            finally:
-                os.chdir(original_cwd)
+
+    def test_export_embeddings_simple_filename(self):
+        """Test export with simple filename (no directory path)."""
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_st.return_value = mock_model
+
+            from llm_concept_embedder import ClinicalConceptEmbedder
+
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
+
+            with TemporaryDirectory() as tmpdir:
+                original_cwd = os.getcwd()
+                try:
+                    os.chdir(tmpdir)
+                    output_path = "simple_test.pkl"
+                    cui_to_embedding = {"1001": np.random.randn(384).astype(np.float32)}
+
+                    embedder.export_embeddings(cui_to_embedding, output_path)
+
+                    self.assertTrue(os.path.exists(output_path))
+                finally:
+                    os.chdir(original_cwd)
 
     def test_ollama_init_with_custom_url(self):
         """Test Ollama backend initialization with custom URL."""
@@ -186,16 +215,14 @@ class TestConceptVectorSearch(unittest.TestCase):
 
     def test_build_index(self):
         """Test building FAISS index."""
-        from unittest.mock import MagicMock, patch
+        with patch.dict("sys.modules", {"faiss": MagicMock()}):
+            from llm_concept_embedder import ConceptVectorSearch
 
-        from llm_concept_embedder import ConceptVectorSearch
+            mock_faiss = sys.modules["faiss"]
+            mock_index = MagicMock()
+            mock_faiss.IndexFlatIP.return_value = mock_index
+            mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-        mock_faiss = MagicMock()
-        mock_index = MagicMock()
-        mock_faiss.IndexFlatIP.return_value = mock_index
-        mock_faiss.IndexHNSWFlat.return_value = mock_index
-
-        with patch.dict("sys.modules", {"faiss": mock_faiss}):
             search = ConceptVectorSearch(self.test_embeddings)
             search.build_index(index_type="FlatIP")
 
@@ -204,16 +231,14 @@ class TestConceptVectorSearch(unittest.TestCase):
 
     def test_build_index_with_names(self):
         """Test building index with cui_to_name mapping."""
-        from unittest.mock import MagicMock, patch
+        with patch.dict("sys.modules", {"faiss": MagicMock()}):
+            from llm_concept_embedder import ConceptVectorSearch
 
-        from llm_concept_embedder import ConceptVectorSearch
+            mock_faiss = sys.modules["faiss"]
+            mock_index = MagicMock()
+            mock_faiss.IndexFlatIP.return_value = mock_index
+            mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-        mock_faiss = MagicMock()
-        mock_index = MagicMock()
-        mock_faiss.IndexFlatIP.return_value = mock_index
-        mock_faiss.IndexHNSWFlat.return_value = mock_index
-
-        with patch.dict("sys.modules", {"faiss": mock_faiss}):
             search = ConceptVectorSearch(
                 {"embeddings": self.test_embeddings, "names": self.test_names}
             )
@@ -341,41 +366,58 @@ class TestIntegration(unittest.TestCase):
 
     def test_hf_embedding_generation(self):
         """Test complete HF embedding pipeline."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
+            mock_model.encode = MagicMock(
+                return_value=np.random.randn(2, 384).astype(np.float32)
+            )
+            mock_st.return_value = mock_model
 
-        concepts = pd.DataFrame(
-            [
-                {"cui": "1001", "preferred_name": "Meningioma"},
-                {"cui": "2002", "preferred_name": "Glioblastoma"},
-            ]
-        )
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-        )
+            concepts = pd.DataFrame(
+                [
+                    {"cui": "1001", "preferred_name": "Meningioma"},
+                    {"cui": "2002", "preferred_name": "Glioblastoma"},
+                ]
+            )
 
-        texts = embedder.prepare_concept_text(concepts)
-        embeddings = embedder.generate_embeddings(texts, batch_size=2)
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+            )
 
-        self.assertEqual(embeddings.shape[0], 2)
-        self.assertEqual(embeddings.shape[1], 384)
+            texts = embedder.prepare_concept_text(concepts)
+            embeddings = embedder.generate_embeddings(texts, batch_size=2)
+
+            self.assertEqual(embeddings.shape[0], 2)
+            self.assertEqual(embeddings.shape[1], 384)
 
     def test_batch_size_default(self):
         """Test that generate_embeddings uses instance batch_size."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        with patch("llm_concept_embedder.SentenceTransformer") as mock_st:
+            mock_model = MagicMock()
 
-        _ = pd.DataFrame([{"cui": "1", "preferred_name": "test"}] * 5)
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
-            backend="hf",
-            batch_size=3,
-        )
+            def encode_side_effect(texts, **kwargs):
+                num_texts = len(texts) if isinstance(texts, list) else 1
+                return np.random.randn(num_texts, 384).astype(np.float32)
 
-        texts = ["test text"] * 5
-        embeddings = embedder.generate_embeddings(texts)
+            mock_model.encode.side_effect = encode_side_effect
+            mock_st.return_value = mock_model
 
-        self.assertEqual(embeddings.shape[0], 5)
+            from llm_concept_embedder import ClinicalConceptEmbedder
+
+            _ = pd.DataFrame([{"cui": "1", "preferred_name": "test"}] * 5)
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
+                backend="hf",
+                batch_size=3,
+            )
+
+            texts = ["test text"] * 5
+            embeddings = embedder.generate_embeddings(texts)
+
+            self.assertEqual(embeddings.shape[0], 5)
 
 
 if __name__ == "__main__":
