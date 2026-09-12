@@ -1,3 +1,8 @@
+from src.snomed_methods.concept_mapper import (
+    ConceptMapper,
+    batch_map_concepts,
+    map_concept,
+)
 from src.snomed_methods.hybrid_search import (
     HybridSearch,
     SearchResult,
@@ -31,4 +36,7 @@ __all__ = [
     "SemanticSearch",
     "SearchResults",
     "expand_concepts",
+    "ConceptMapper",
+    "map_concept",
+    "batch_map_concepts",
 ]
