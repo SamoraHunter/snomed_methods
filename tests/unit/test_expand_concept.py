@@ -7,7 +7,7 @@ from src.snomed_methods import SnomedTermLookup
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-fixture_dir = os.path.join(PROJECT_ROOT, "tests", "data", "snomed_fixtures")
+fixture_dir = os.path.join(PROJECT_ROOT, "data", "snomed_fixtures")
 desc_file = os.path.join(fixture_dir, "descriptions_sample.txt")
 
 lookup = SnomedTermLookup(desc_file)

@@ -7,7 +7,7 @@ from src.snomed_methods import SnomedRelations
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-fixture_dir = os.path.join(PROJECT_ROOT, "tests", "data", "snomed_fixtures")
+fixture_dir = os.path.join(PROJECT_ROOT, "data", "snomed_fixtures")
 rel_file = os.path.join(fixture_dir, "relationships_sample.txt")
 
 snomed = SnomedRelations(snomed_rf2_full_path=rel_file, medcat=False)

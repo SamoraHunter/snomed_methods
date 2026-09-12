@@ -181,7 +181,7 @@ jobs:
           # Run unit tests first
           pytest tests
           # Then run notebook tests
-          python tests/notebook_runner.py
+          python notebooks/notebook_runner.py
 
       - name: Clean up Jupyter kernels
         if: always()

@@ -14,7 +14,7 @@ def main():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    fixture_dir = os.path.join(project_root, "tests", "data", "snomed_fixtures")
+    fixture_dir = os.path.join(project_root, "data", "snomed_fixtures")
     rel_file = os.path.join(fixture_dir, "relationships_sample.txt")
 
     print(f"\nLoading SNOMED data from: {rel_file}")
