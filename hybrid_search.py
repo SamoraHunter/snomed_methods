@@ -11,7 +11,7 @@ Results are re-ranked using weighted combination of scores from each strategy.
 """
 
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -425,10 +425,13 @@ class HybridSearch:
 class SearchResult:
     """Container for hybrid search results."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.results: List[Tuple[str, str, float]] = []
         self.cui_to_term: Dict[str, str] = {}
         self.cui_scores: Dict[str, dict] = {}
+        self.term_matches: int = 0
+        self.hierarchy_matches: int = 0
+        self.embedding_matches: int = 0
         self.term_matches: int = 0
         self.hierarchy_matches: int = 0
         self.embedding_matches: int = 0
@@ -469,10 +472,10 @@ class SearchResult:
 
 
 def expand_concepts(
-    term_or_terms,
-    uk_path: str = None,
-    medcat_path: str = None,
-    model_path: str = None,
+    term_or_terms: Union[str, List[str]],
+    uk_path: Optional[str] = None,
+    medcat_path: Optional[str] = None,
+    model_path: Optional[str] = None,
     backend: str = "transformers",
     device: str = "cpu",
     top_k: int = 20,

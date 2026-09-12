@@ -33,13 +33,15 @@ Search Parameters:
 
 import importlib.util
 import os
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
+
+from snomed_term_lookup import SnomedTermLookup
 
 
 class SemanticSearch:
     """SNOMED CT semantic search with configurable expansion strategies."""
 
-    def __init__(self, uk_path: str = None):
+    def __init__(self, uk_path: Optional[str] = None):
         """Initialize searcher with UK Clinical RF2 data path.
 
         Args:
@@ -58,7 +60,7 @@ class SemanticSearch:
                 "uk_sct2cl_42.2.0",
                 "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
             )
-        self.uk_path = uk_path
+        self.uk_path: Optional[str] = uk_path
 
     def _generate_search_terms(self, term: str) -> List[str]:
         """Generate related search terms from input term.
@@ -83,8 +85,8 @@ class SemanticSearch:
             f"dys{term}",
         ]
 
-        seen = set()
-        result = []
+        seen: Set[str] = set()
+        result: List[str] = []
         for v in variants:
             if v and v.lower() not in seen:
                 seen.add(v.lower())
@@ -94,7 +96,7 @@ class SemanticSearch:
 
     def _term_lookup_search(
         self,
-        lookup,
+        lookup: SnomedTermLookup,
         terms: List[str],
         match_prefix: bool = True,
         top_n_per_term: int = 50,
@@ -119,7 +121,7 @@ class SemanticSearch:
             warnings.warn("snomed-term-lookup not available")
             return set()
 
-        results = set()
+        results: Set[Tuple[str, str]] = set()
 
         for search_term in terms:
             try:
@@ -180,17 +182,16 @@ class SemanticSearch:
         except Exception:
             return [], []
 
+        lookup: Optional[SnomedTermLookup] = None
         if importlib.util.find_spec("snomed_term_lookup") is not None:
             from snomed_term_lookup import create_term_lookup_from_directory
 
             lookup = create_term_lookup_from_directory(self.uk_path)
-        else:
-            lookup = None
 
-        results_codes = []
-        results_names = []
-        processed = set()
-        queue = list(cui_list[:max_concepts])
+        results_codes: List[str] = []
+        results_names: List[str] = []
+        processed: Set[str] = set()
+        queue: List[str] = list(cui_list[:max_concepts])
 
         while queue and len(processed) < max_concepts:
             current_cui = str(queue.pop(0))
@@ -199,7 +200,7 @@ class SemanticSearch:
                 continue
             processed.add(current_cui)
 
-            name = None
+            name: Optional[str] = None
             if lookup:
                 try:
                     info = lookup.getconcept_info(current_cui)
@@ -270,8 +271,8 @@ class SemanticSearch:
         if not snomed.has_medcat():
             return [], []
 
-        all_codes = []
-        all_names = []
+        all_codes: List[str] = []
+        all_names: List[str] = []
         cdb = snomed.cat.cdb
 
         for cui in cui_list:
@@ -307,7 +308,7 @@ class SemanticSearch:
         Returns:
             Dictionary mapping CUI to preferred name
         """
-        combined = {str(c): t for c, t in term_matches}
+        combined: Dict[str, str] = {str(c): t for c, t in term_matches}
 
         for code, name in zip(codes, names):
             code_str = str(code)
@@ -321,7 +322,7 @@ class SemanticSearch:
 
     def search(
         self,
-        term_or_terms,
+        term_or_terms: Union[str, List[str]],
         max_concepts: int = 100,
         top_n_per_term: int = 50,
         use_hierarchy: bool = True,
@@ -346,7 +347,7 @@ class SemanticSearch:
             search_terms = list(term_or_terms)
             base_term = "_".join(search_terms[:2])
 
-        log_messages = []
+        log_messages: List[str] = []
         log_messages.append(f"{'='*60}")
         log_messages.append("SEMANTIC EXPANSION SEARCH")
         log_messages.append(f"{'='*60}")
@@ -434,9 +435,9 @@ class SemanticSearch:
 class SearchResults:
     """Container for semantic search results with easy access to different formats."""
 
-    def __init__(self, concepts: Dict[str, str], metrics: Dict):
-        self._concepts = concepts
-        self._metrics = metrics
+    def __init__(self, concepts: Dict[str, str], metrics: Dict[str, int]) -> None:
+        self._concepts: Dict[str, str] = concepts
+        self._metrics: Dict[str, int] = metrics
 
     @property
     def concepts(self) -> Dict[str, str]:
@@ -457,7 +458,9 @@ class SearchResults:
     def get_cui_to_term_dict(self) -> Dict[str, str]:
         return self.concepts
 
-    def get_core_concepts(self, base_term: str = None) -> List[Tuple[str, str]]:
+    def get_core_concepts(
+        self, base_term: Optional[str] = None
+    ) -> List[Tuple[str, str]]:
         if base_term is None and "search_terms_used" in self._metrics:
             base_term = self._metrics["search_terms_used"][0]
 
@@ -469,7 +472,9 @@ class SearchResults:
             ]
         return list(self._concepts.items())
 
-    def get_expanded_concepts(self, base_term: str = None) -> List[Tuple[str, str]]:
+    def get_expanded_concepts(
+        self, base_term: Optional[str] = None
+    ) -> List[Tuple[str, str]]:
         core = {c for c, _ in self.get_core_concepts(base_term)}
         return [(cui, name) for cui, name in self._concepts.items() if cui not in core]
 
@@ -486,8 +491,8 @@ class SearchResults:
 
 
 def expand_concepts(
-    term_or_terms,
-    uk_path: str = None,
+    term_or_terms: Union[str, List[str]],
+    uk_path: Optional[str] = None,
     max_concepts: int = 100,
     top_n_per_term: int = 50,
     use_hierarchy: bool = True,

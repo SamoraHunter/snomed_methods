@@ -12,30 +12,20 @@ def main():
     print("Testing get_subsumed_concepts() with Meningioma")
     print("=" * 70)
 
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    rel_file = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-        "Full",
-        "Terminology",
-        "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
-    )
-
-    uk_snomed_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-    )
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    fixture_dir = os.path.join(project_root, "tests", "data", "snomed_fixtures")
+    rel_file = os.path.join(fixture_dir, "relationships_sample.txt")
 
     print(f"\nLoading SNOMED data from: {rel_file}")
 
     snomed = SnomedRelations(snomed_rf2_full_path=rel_file, medcat=False)
     print(f"Loaded {len(snomed.df)} relationships")
 
-    from snomed_term_lookup import create_term_lookup_from_directory
+    from snomed_term_lookup import SnomedTermLookup
 
-    lookup = create_term_lookup_from_directory(uk_snomed_dir)
+    desc_file = os.path.join(fixture_dir, "descriptions_sample.txt")
+    lookup = SnomedTermLookup(desc_file)
 
     meningioma_matches = lookup.find_concepts_by_term("meningioma", top_n=5)
 

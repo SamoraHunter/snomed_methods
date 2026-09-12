@@ -27,8 +27,8 @@ class ClinicalConceptEmbedder:
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 64,
         ollama_base_url: str = "http://localhost:11434",
-        transformers_model_type: str = None,
-    ):
+        transformers_model_type: Optional[str] = None,
+    ) -> None:
         """Initialize the embedder with a model and backend.
 
         Args:
@@ -43,12 +43,12 @@ class ClinicalConceptEmbedder:
             transformers_model_type: Optional model type for Transformers backend
                 (e.g., 'BertModel'). If None, auto-inferred.
         """
-        self.model_name_or_path = model_name_or_path
-        self.backend = backend
-        self.device = device
-        self.batch_size = batch_size
-        self.ollama_base_url = ollama_base_url
-        self.transformers_model_type = transformers_model_type
+        self.model_name_or_path: str = model_name_or_path
+        self.backend: str = backend
+        self.device: str = device
+        self.batch_size: int = batch_size
+        self.ollama_base_url: str = ollama_base_url
+        self.transformers_model_type: Optional[str] = transformers_model_type
 
         if backend == "hf":
             self._init_hf_model()
@@ -71,7 +71,7 @@ class ClinicalConceptEmbedder:
         except Exception as e:
             raise RuntimeError(f"Failed to load HF model: {e}") from None
 
-    def _init_transformers_model(self):
+    def _init_transformers_model(self) -> None:
         """Initialize Hugging Face Transformers model directly."""
         try:
             from transformers import AutoModel, AutoTokenizer
@@ -86,7 +86,7 @@ class ClinicalConceptEmbedder:
         ).to(self.device)
         self._model_type = "transformers"
 
-    def _init_ollama_client(self, base_url: str):
+    def _init_ollama_client(self, base_url: str) -> None:
         """Initialize Ollama client with custom URL.
 
         Args:
@@ -104,7 +104,9 @@ class ClinicalConceptEmbedder:
             ) from None
 
     def prepare_concept_text(
-        self, concept_df: pd.DataFrame, text_columns: List[str] = None
+        self,
+        concept_df: pd.DataFrame,
+        text_columns: Optional[List[str]] = None,
     ) -> List[str]:
         """Format concept data into dense clinical text prompts.
 
@@ -151,8 +153,8 @@ class ClinicalConceptEmbedder:
     def generate_embeddings(
         self,
         concept_texts: List[str],
-        batch_size: int = None,
-        checkpoint_path: str = None,
+        batch_size: Optional[int] = None,
+        checkpoint_path: Optional[str] = None,
         checkpoint_interval: int = 500,
     ) -> np.ndarray:
         """Generate embeddings for a list of concept texts.
@@ -275,7 +277,7 @@ class ClinicalConceptEmbedder:
             with open(output_path, "wb") as f:
                 pickle.dump(embeddings_dict, f)
 
-    def export_dataframe(self, df: pd.DataFrame, output_path: str):
+    def export_dataframe(self, df: pd.DataFrame, output_path: str) -> None:
         """Export concept DataFrame to CSV/Parquet."""
         output_dir = os.path.dirname(output_path)
         if output_dir:
@@ -416,8 +418,8 @@ class ConceptVectorSearch:
 
     def search(
         self,
-        query_text: str = None,
-        query_embedding: np.ndarray = None,
+        query_text: Optional[str] = None,
+        query_embedding: Optional[np.ndarray] = None,
         top_k: int = 20,
     ) -> List[Tuple[str, str, float]]:
         """Search for similar concepts.
@@ -462,7 +464,9 @@ class ConceptVectorSearch:
 
         return results
 
-    def _get_query_embedding(self, query_text: str) -> Optional[np.ndarray]:
+    def _get_query_embedding(
+        self, query_text: Optional[str] = None
+    ) -> Optional[np.ndarray]:
         """Get embedding for a query string using the configured embedder model.
 
         Args:
@@ -538,7 +542,14 @@ def load_concepts_from_medcat(cat) -> pd.DataFrame:
 
 
 def load_concepts_from_cdb(cdb) -> pd.DataFrame:
-    """Load concepts from a MedCAT ConceptDatabase directly."""
+    """Load concepts from a MedCAT ConceptDatabase directly.
+
+    Args:
+        cdb: MedCAT ConceptDatabase instance.
+
+    Returns:
+        DataFrame with concept information (cui, preferred_name, synonyms, type_id).
+    """
     concepts_data = []
 
     for cui in tqdm(cdb.cui2preferred_name.keys(), desc="Loading CDB concepts"):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snomed-methods"
-version = "0.1.0"
+version = "0.1.0-dev"
 description = "Methods and utilities for working with SNOMED CT (Systematized Nomenclature of Medicine - Clinical Terms)"
 readme = ".INSTRUCTIONS.md"
 requires-python = ">=3.8"

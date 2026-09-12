@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -13,15 +13,15 @@ class SnomedRelations:
 
     def __init__(
         self,
-        medcat=False,
-        snowstorm=False,
-        aliencat=False,
-        dgx=False,
-        dhcap=False,
-        dhcap02=True,
-        snomed_rf2_full_path=None,
-        medcat_path=None,
-    ):
+        medcat: bool = False,
+        snowstorm: bool = False,
+        aliencat: bool = False,
+        dgx: bool = False,
+        dhcap: bool = False,
+        dhcap02: bool = True,
+        snomed_rf2_full_path: Optional[str] = None,
+        medcat_path: Optional[str] = None,
+    ) -> None:
 
         sys.path.insert(0, "..")
 
@@ -39,11 +39,11 @@ class SnomedRelations:
                 f"Set SNOMED_RF2_PATH environment variable to override the default."
             )
 
-        self.df = pd.read_csv(snomed_rf2_full_path, sep="\t", header=0)
+        self.df: pd.DataFrame = pd.read_csv(snomed_rf2_full_path, sep="\t", header=0)
 
-        self.medcat = medcat
+        self.medcat: bool = medcat
 
-        self.snowstorm = snowstorm
+        self.snowstorm: bool = snowstorm
 
         if self.medcat:
             try:
@@ -73,13 +73,13 @@ class SnomedRelations:
 
     def _get_medcat_path(
         self,
-        medcat_path,
-        medcat_default,
-        aliencat=False,
-        dgx=False,
-        dhcap=False,
-        dhcap02=False,
-    ):
+        medcat_path: Optional[str],
+        medcat_default: str,
+        aliencat: bool = False,
+        dgx: bool = False,
+        dhcap: bool = False,
+        dhcap02: bool = False,
+    ) -> str:
         if aliencat:
             return self._get_aliencat_path(medcat_path, medcat_default)
         if dgx:
@@ -92,7 +92,9 @@ class SnomedRelations:
             return medcat_default
         return medcat_path
 
-    def _get_aliencat_path(self, medcat_path, medcat_default):
+    def _get_aliencat_path(
+        self, medcat_path: Optional[str], medcat_default: str
+    ) -> str:
         medcat_path_env = os.environ.get("MEDCAT_ALIENCAT_PATH")
         if medcat_path is None:
             medcat_path = medcat_default
@@ -100,7 +102,7 @@ class SnomedRelations:
             medcat_path = medcat_path_env
         return medcat_path
 
-    def _get_dgx_path(self, medcat_path):
+    def _get_dgx_path(self, medcat_path: Optional[str]) -> str:
         medcat_path_env = os.environ.get("MEDCAT_DGX_PATH")
         if medcat_path is None:
             medcat_path = (
@@ -111,7 +113,7 @@ class SnomedRelations:
             medcat_path = medcat_path_env
         return medcat_path
 
-    def _get_dhcap_path(self, medcat_path):
+    def _get_dhcap_path(self, medcat_path: Optional[str]) -> str:
         medcat_path_env = os.environ.get("MEDCAT_DHCAP_PATH")
         if medcat_path is None:
             medcat_path = "/data/medcat_models/medcat_model_pack_316666b47dfaac07.zip"
@@ -119,7 +121,7 @@ class SnomedRelations:
             medcat_path = medcat_path_env
         return medcat_path
 
-    def _get_dhcap02_path(self, medcat_path):
+    def _get_dhcap02_path(self, medcat_path: Optional[str]) -> str:
         medcat_path_env = os.environ.get("MEDCAT_DHCAP02_PATH")
         if medcat_path is None:
             medcat_path = "/data/medcat_models/medcat_model_pack_316666b47dfaac07.zip"
@@ -127,21 +129,24 @@ class SnomedRelations:
             medcat_path = medcat_path_env
         return medcat_path
 
-    def get_children(self, cui):
+    def get_children(self, cui: Union[int, str]) -> List[int]:
         try:
             cui = int(cui)
             return self.df[self.df["destinationId"] == cui]["sourceId"].to_list()
         except ValueError:
             return []
 
-    def get_parents(self, cui):
+    def get_parents(self, cui: Union[int, str]) -> List[int]:
         try:
-            cui = int(cui)
-            return self.df[self.df["sourceId"] == cui]["destinationId"].to_list()
+            cui_int = int(cui)
+            result = self.df[self.df["sourceId"] == cui_int]["destinationId"]
+            return result.tolist()
         except ValueError:
             return []
 
-    def expand_codes(self, filter_root_cui, debug=False):
+    def expand_codes(
+        self, filter_root_cui: Union[int, str], debug: bool = False
+    ) -> Tuple[List[int], List[str]]:
 
         if self.snowstorm:
             return self.expand_codes_snowstorm(filter_root_cui, debug=debug)
@@ -183,7 +188,9 @@ class SnomedRelations:
 
     #     return retrieved_codes_temp, retrieved_names_temp
 
-    def expand_codes_local(self, filter_root_cui, debug=False):
+    def expand_codes_local(
+        self, filter_root_cui: Union[int, str], debug: bool = False
+    ) -> Tuple[List[int], List[str]]:
 
         if debug:
 
@@ -214,14 +221,14 @@ class SnomedRelations:
 
         return retrieved_codes_temp, retrieved_names_temp
 
-    def has_medcat(self):
+    def has_medcat(self) -> bool:
         return (
             getattr(self, "medcat", False)
             and hasattr(self, "cat")
             and self.cat is not None
         )
 
-    def get_pretty_name(self, cui):
+    def get_pretty_name(self, cui: Union[int, str]) -> Optional[str]:
         if not self.has_medcat():
             import warnings
 
@@ -231,11 +238,13 @@ class SnomedRelations:
             return None
         return self.cat.cdb.cui2preferred_name.get(str(cui))
 
-    def get_pretty_name_list(self, cui_list):
+    def get_pretty_name_list(
+        self, cui_list: List[Union[int, str]]
+    ) -> List[Optional[str]]:
         if not self.has_medcat():
             return [None] * len(cui_list)
 
-        pretty_name_list = []
+        pretty_name_list: List[Optional[str]] = []
 
         for i in range(0, len(cui_list)):
             name = self.get_pretty_name(cui_list[i])
@@ -243,7 +252,9 @@ class SnomedRelations:
                 pretty_name_list.append(name)
         return pretty_name_list
 
-    def expand_codes_children_local(self, filter_root_cui, debug=False):
+    def expand_codes_children_local(
+        self, filter_root_cui: Union[int, str], debug: bool = False
+    ) -> Tuple[List[int], List[str]]:
 
         if debug:
 
@@ -258,7 +269,9 @@ class SnomedRelations:
 
         return children_codes, retrieved_names_temp
 
-    def expand_codes_parents_local(self, filter_root_cui, debug=False):
+    def expand_codes_parents_local(
+        self, filter_root_cui: Union[int, str], debug: bool = False
+    ) -> Tuple[List[int], List[str]]:
 
         if debug:
 
@@ -273,14 +286,14 @@ class SnomedRelations:
 
         return parent_codes, retrieved_names_temp
 
-    def expand_codes_snowstorm(self, filter_root_cui, debug=False):
-        # debug = True
+    def expand_codes_snowstorm(
+        self, filter_root_cui: Union[int, str], debug: bool = False
+    ) -> Tuple[List[int], List[str]]:
         if debug:
-
             pass
 
-        retrieved_codes_temp = []
-        retrieved_names_temp = []
+        retrieved_codes_temp: List[int] = []
+        retrieved_names_temp: List[str] = []
 
         c = self.get_snowstorm_response_children(str(filter_root_cui))
         if debug:
@@ -310,9 +323,14 @@ class SnomedRelations:
 
         return retrieved_codes_temp, retrieved_names_temp
 
-    def recursive_code_expansion(self, filter_root_cui, n_recursion=3, debug=False):
-        retrieved_codes = [filter_root_cui]
-        retrieved_names = []
+    def recursive_code_expansion(
+        self,
+        filter_root_cui: Union[int, str],
+        n_recursion: int = 3,
+        debug: bool = False,
+    ) -> Tuple[List[int], List[str]]:
+        retrieved_codes: List[Union[int, str]] = [filter_root_cui]
+        retrieved_names: List[str] = []
 
         for _i in tqdm(range(n_recursion)):
 
@@ -344,8 +362,12 @@ class SnomedRelations:
         return retrieved_codes, retrieved_names
 
     def get_medcat_cdb_most_similar(
-        self, cui, context_type="xxxlong", type_id_filter=None, topn=10
-    ):
+        self,
+        cui: Union[int, str],
+        context_type: str = "xxxlong",
+        type_id_filter: Optional[List[int]] = None,
+        topn: int = 10,
+    ) -> Tuple[List[str], List[Optional[str]]]:
         if not self.has_medcat():
             import warnings
 
@@ -373,9 +395,14 @@ class SnomedRelations:
 
         return codes, names
 
-    def build_lists_medcat_snomedtree(self, input_list, medcat=False, snomed=True):
-        retrieved_codes = []
-        retrieved_names = []
+    def build_lists_medcat_snomedtree(
+        self,
+        input_list: List[Union[int, str]],
+        medcat: bool = False,
+        snomed: bool = True,
+    ) -> Tuple[List[int], List[Optional[str]]]:
+        retrieved_codes: List[int] = []
+        retrieved_names: List[str] = []
 
         if snomed:
             for item in input_list:
@@ -386,10 +413,8 @@ class SnomedRelations:
         if medcat:
             for item in input_list:
                 codes, names = self.get_medcat_cdb_most_similar(item)
-                retrieved_codes.extend(codes)
+                retrieved_codes.extend([int(code) for code in codes])
                 retrieved_names.extend(names)
-
-        retrieved_codes = [int(code) for code in retrieved_codes]
 
         return retrieved_codes, retrieved_names
 
@@ -405,7 +430,12 @@ class SnomedRelations:
         # {T-33}     15117
         # {T-42}     14591
 
-    def get_medcat_similar_score(self, input_cui, target_cui_list, debug=False):
+    def get_medcat_similar_score(
+        self,
+        input_cui: Union[int, str],
+        target_cui_list: List[Union[int, str]],
+        debug: bool = False,
+    ) -> List[Optional[float]]:
         if not self.has_medcat():
             import warnings
 
@@ -416,24 +446,24 @@ class SnomedRelations:
         if debug:
             pass
 
-        target_cui_list = list(map(str, target_cui_list))
+        target_cui_list_str = list(map(str, target_cui_list))
 
-        input_cui = str(input_cui)
+        input_cui_str = str(input_cui)
 
         try:
             res = self.cat.cdb.most_similar(
-                input_cui, context_type="xxxlong", type_id_filter=[], topn=999999
+                input_cui_str, context_type="xxxlong", type_id_filter=[], topn=999999
             )
         except Exception:
             return []
 
-        results_list = []
+        results_list: List[Optional[float]] = []
 
         if debug:
             pass
 
         for i in range(len(target_cui_list)):
-            target_cui = target_cui_list[i]
+            target_cui = target_cui_list_str[i]
 
             sim_res = res.get(target_cui)
 
@@ -456,7 +486,12 @@ class SnomedRelations:
 
         return results_list
 
-    def append_concept_sim_to_df(self, df, target_concept_sim_list, target_cui_list):
+    def append_concept_sim_to_df(
+        self,
+        df: pd.DataFrame,
+        target_concept_sim_list: List[Union[int, str]],
+        target_cui_list: List[Union[int, str]],
+    ) -> pd.DataFrame:
         if not self.has_medcat():
             import warnings
 
@@ -475,15 +510,21 @@ class SnomedRelations:
 
     def retrieve_search_synonyms(
         self,
-        filter_root_cui,
-        n_recursion=10,
-        context_type="xxxlong",
-        type_id_filter=None,
-        topn=50,
-        debug=False,
-        use_snomed=True,
-        use_medcat=True,
-    ):
+        filter_root_cui: Union[int, str],
+        n_recursion: int = 10,
+        context_type: str = "xxxlong",
+        type_id_filter: Optional[List[int]] = None,
+        topn: int = 50,
+        debug: bool = False,
+        use_snomed: bool = True,
+        use_medcat: bool = True,
+    ) -> Tuple[
+        List[str],
+        List[str],
+        List[str],
+        List[Optional[str]],
+        List[str],
+    ]:
         # Initialize a list to store names
         if type_id_filter is None:
             type_id_filter = []
@@ -656,7 +697,9 @@ class SnomedRelations:
             all_codes,
         )
 
-    def get_snowstorm_response_children(self, concept_id):
+    def get_snowstorm_response_children(
+        self, concept_id: Union[int, str]
+    ) -> Optional[str]:
         url = f"https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct/browser/MAIN%2FSNOMEDCT-GB/concepts/{concept_id}/children?form=inferred&includeDescendantCount=false"
 
         headers = {
@@ -673,7 +716,9 @@ class SnomedRelations:
         except requests.exceptions.RequestException:
             return None
 
-    def get_snowstorm_response_ancestors(self, concept_id):
+    def get_snowstorm_response_ancestors(
+        self, concept_id: Union[int, str]
+    ) -> Optional[str]:
         url = f"https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct/browser/MAIN%2FSNOMEDCT-GB/concepts/{concept_id}/ancestors?excludeDirectChild=false"
 
         headers = {
@@ -690,7 +735,9 @@ class SnomedRelations:
         except requests.exceptions.RequestException:
             return None
 
-    def parse_snowstorm_response_to_cui_name(self, response_text):
+    def parse_snowstorm_response_to_cui_name(
+        self, response_text: Optional[str]
+    ) -> Tuple[List[str], List[str]]:
         import json
 
         if response_text is None:
@@ -701,8 +748,8 @@ class SnomedRelations:
         except json.JSONDecodeError:
             return [], []
 
-        codes = []
-        names = []
+        codes: List[str] = []
+        names: List[str] = []
 
         items = data.get("children", [])
         for item in items:
@@ -716,8 +763,8 @@ class SnomedRelations:
 
     def get_subsumed_concepts(
         self,
-        cui,
-        semantic_tags: List[str] | None = None,
+        cui: Union[int, str],
+        semantic_tags: Optional[List[str]] = None,
         max_depth: int = 10,
         active_only: bool = True,
         include_ancestors: bool = False,
