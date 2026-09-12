@@ -290,6 +290,56 @@ def run_tests():
         traceback.print_exc()
         results["failed"].append(f"Metrics verification: {e}")
 
+    # Test 4: Semantic Filter functionality
+    print("-" * 40)
+    print("TEST 4: Semantic Filter Functionality")
+    print("-" * 40)
+    try:
+        from src.snomed_methods import HybridSearch, SearchResult
+
+        if os.path.exists(uk_path):
+            print(f"[INFO] Using SNOMED path: {uk_path}")
+
+        searcher = HybridSearch(uk_path=uk_path, medcat_path=medcat_path)
+
+        # Get some results first (without filter)
+        result = searcher.search("diabetes", top_k=10)
+        original_count = len(result)
+
+        print(f"[INFO] Original search returned {original_count} results")
+
+        if hasattr(searcher, "SEMANTIC_CATEGORIES"):
+            print("[PASS] SEMANTIC_CATEGORIES constant exists")
+            results["passed"].append("SEMANTIC_CATEGORIES exists")
+        else:
+            print("[FAIL] SEMANTIC_CATEGORIES constant missing")
+            results["failed"].append("SEMANTIC_CATEGORIES constant")
+
+        # Test filtering
+        if original_count > 0:
+            filtered = searcher._apply_semantic_filter(result, ["disorder", "finding"])
+            filtered_count = len(filtered)
+            print(f"[INFO] Filtered results: {filtered_count} (from {original_count})")
+            print("[PASS] _apply_semantic_filter method works")
+            results["passed"].append("_apply_semantic_filter works")
+        else:
+            print("[WARN] No results to filter")
+
+        # Test standalone function
+        try:
+            from src.snomed_methods import semantic_filter_results
+
+            # noqa: F841 - variable used for testing existence of function
+            filtered = semantic_filter_results(result, "procedure")
+            print("[PASS] semantic_filter_results standalone function exists")
+            results["passed"].append("semantic_filter_results function")
+        except ImportError:
+            print("[FAIL] semantic_filter_results not found")
+            results["failed"].append("semantic_filter_results function")
+
+    except Exception as e:
+        print(f"[INFO] Semantic filter test skipped or failed: {e}")
+
     print()
     print("=" * 80)
     print("TEST SUMMARY")

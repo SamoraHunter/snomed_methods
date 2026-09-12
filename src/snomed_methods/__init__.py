@@ -1,4 +1,8 @@
-from src.snomed_methods.hybrid_search import HybridSearch, SearchResult
+from src.snomed_methods.hybrid_search import (
+    HybridSearch,
+    SearchResult,
+    semantic_filter_results,
+)
 from src.snomed_methods.llm_concept_embedder import (
     ClinicalConceptEmbedder,
     ConceptVectorSearch,

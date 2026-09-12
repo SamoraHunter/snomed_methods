@@ -162,6 +162,7 @@ class HybridSearch:
             except Exception:
                 pass
 
+    # ruff: noqa: C901
     def search(
         self,
         query: str,
@@ -170,6 +171,7 @@ class HybridSearch:
         hierarchy_weight: float = 0.2,
         embedding_weight: float = 0.5,
         max_hierarchy_nodes: int = 100,
+        semantic_filter: Optional[List[str]] = None,
     ) -> "SearchResult":
         """Search for related SNOMED concepts using hybrid approach.
 
@@ -180,6 +182,9 @@ class HybridSearch:
             hierarchy_weight: Weight for hierarchy expansion score (0-1)
             embedding_weight: Weight for embedding similarity score (0-1)
             max_hierarchy_nodes: Maximum nodes to expand in hierarchy
+            semantic_filter: List of SNOMED semantic categories to filter results.
+                Example values: 'disorder', 'finding', 'procedure', 'event',
+                'body structure', 'substance', 'organism'. If None, no filtering.
 
         Returns:
             SearchResult object with ranked concepts and scores
@@ -233,6 +238,9 @@ class HybridSearch:
             results.results.append(
                 (cui, results.cui_to_term.get(cui, f"CUI: {cui}"), combined_score)
             )
+
+        if semantic_filter:
+            results = self._apply_semantic_filter(results, semantic_filter)
 
         return results
 
@@ -404,6 +412,133 @@ class HybridSearch:
         except Exception:
             return {}
 
+    def _apply_semantic_filter(
+        self, results: "SearchResult", semantic_categories: List[str]
+    ) -> "SearchResult":
+        """Filter search results by SNOMED semantic categories.
+
+        Args:
+            results: SearchResult object to filter
+            semantic_categories: List of category names (e.g., 'disorder', 'finding')
+
+        Returns:
+            Filtered SearchResult object
+        """
+        allowed_type_ids = set()
+        for category in semantic_categories:
+            category_lower = category.lower().strip()
+            if category_lower in self.SEMANTIC_CATEGORIES:
+                allowed_type_ids.update(self.SEMANTIC_CATEGORIES[category_lower])
+
+        if not allowed_type_ids:
+            return results
+
+        filtered_results = []
+        cuis_to_keep = []
+
+        for cui, term, score in results.results:
+            try:
+                info = self._term_lookup.getconcept_info(cui)
+                if info and "type_id" in info:
+                    type_id = int(info["type_id"])
+                    if type_id in allowed_type_ids:
+                        filtered_results.append((cui, term, score))
+                        cuis_to_keep.append(cui)
+            except (ValueError, TypeError):
+                continue
+
+        filtered_search_result = SearchResult()
+        filtered_search_result.results = filtered_results
+        for cui in cuis_to_keep:
+            filtered_search_result.cui_to_term[cui] = results.cui_to_term.get(
+                cui, f"CUI: {cui}"
+            )
+            if cui in results.cui_scores:
+                filtered_search_result.cui_scores[cui] = results.cui_scores[cui]
+
+        return filtered_search_result
+
+    SEMANTIC_CATEGORIES = {
+        "disorder": [
+            404684003,
+            272379006,
+            59881007,
+            441750002,
+        ],
+        "finding": [404684003, 272379006],
+        "procedure": [71388002, 387713003, 363679005],
+        "event": [410540007, 410541006, 272379006],
+        "body structure": [
+            272379006,
+            363679005,
+            410608005,
+        ],
+        "substance": [105590001, 763158003],
+        "organism": [410607006, 370115009],
+        "attribute": [246075003, 246076002],
+        "linkage concept": [419890007, 326984008],
+        "core concept": [410608005],
+    }
+
+    SEMANTIC_CATEGORIES = {
+        "disorder": [404684003, 272379006, 59881007, 441750002],
+        "finding": [404684003, 272379006],
+        "procedure": [71388002, 387713003, 363679005],
+        "event": [410540007, 410541006, 272379006],
+        "body structure": [272379006, 363679005, 410608005],
+        "substance": [105590001, 763158003],
+        "organism": [410607006, 370115009],
+        "attribute": [246075003, 246076002],
+        "linkage concept": [419890007, 326984008],
+        "core concept": [410608005],
+    }
+
+    def _apply_semantic_filter(
+        self, results: "SearchResult", semantic_categories: List[str]
+    ) -> "SearchResult":
+        """Filter search results by SNOMED semantic categories.
+
+        Args:
+            results: SearchResult object to filter
+            semantic_categories: List of category names (e.g., 'disorder', 'finding')
+
+        Returns:
+            Filtered SearchResult object
+        """
+        allowed_type_ids = set()
+        for category in semantic_categories:
+            category_lower = category.lower().strip()
+            if category_lower in self.SEMANTIC_CATEGORIES:
+                allowed_type_ids.update(self.SEMANTIC_CATEGORIES[category_lower])
+
+        if not allowed_type_ids:
+            return results
+
+        filtered_results = []
+        cuis_to_keep = []
+
+        for cui, term, score in results.results:
+            try:
+                info = self._term_lookup.getconcept_info(cui)
+                if info and "type_id" in info:
+                    type_id = int(info["type_id"])
+                    if type_id in allowed_type_ids:
+                        filtered_results.append((cui, term, score))
+                        cuis_to_keep.append(cui)
+            except (ValueError, TypeError):
+                continue
+
+        filtered_search_result = SearchResult()
+        filtered_search_result.results = filtered_results
+        for cui in cuis_to_keep:
+            filtered_search_result.cui_to_term[cui] = results.cui_to_term.get(
+                cui, f"CUI: {cui}"
+            )
+            if cui in results.cui_scores:
+                filtered_search_result.cui_scores[cui] = results.cui_scores[cui]
+
+        return filtered_search_result
+
     def _rank_results(
         self, scores: Dict[str, dict], term_w: float, hier_w: float, embed_w: float
     ) -> List[Tuple[str, float]]:
@@ -474,6 +609,28 @@ class SearchResult:
             f"HybridSearchResult(total={len(self)}, term={m['term_matches']}, "
             f"hier={m['hierarchy_matches']}, embed={m['embedding_matches']})"
         )
+
+
+def semantic_filter_results(
+    results: SearchResult,
+    semantic_categories: Union[str, List[str]],
+) -> SearchResult:
+    """Apply semantic category filtering to existing search results.
+
+    Args:
+        results: SearchResult from hybrid search
+        semantic_categories: Category name(s) to filter by.
+            Options: 'disorder', 'finding', 'procedure', 'event',
+            'body structure', 'substance', 'organism'
+
+    Returns:
+        Filtered SearchResult with only concepts from specified categories
+    """
+    if isinstance(semantic_categories, str):
+        semantic_categories = [semantic_categories]
+
+    searcher = HybridSearch()
+    return searcher._apply_semantic_filter(results, semantic_categories)
 
 
 def expand_concepts(
