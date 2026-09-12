@@ -62,13 +62,27 @@ runs:
       env:
         INTERNAL_CERT_NAME_VAR: ${{ inputs.internal-cert-name }}
       run: |
+        CERT_DIR="/usr/local/share/ca-certificates"
         CERT_NAME="${INTERNAL_CERT_NAME_VAR:-$INTERNAL_CERT_NAME}"
-        CERT_PATH="/usr/local/share/ca-certificates/$CERT_NAME"
-        if [ -f "$CERT_PATH" ]; then
-          echo "✅ Corporate certificate found. Updating system trust store..."
-          update-ca-certificates > /dev/null
+
+        # If a specific cert name was given, prefer checking for it explicitly (kept for
+        # backwards compatibility / explicit diagnostics), but don't gate on it alone:
+        # any *.crt files mounted into CERT_DIR should be trusted, since we don't control
+        # which corporate cert filename(s) get mounted or rotated
+        if [[ -n "$CERT_NAME" && -f "$CERT_DIR/$CERT_NAME" ]]; then
+          echo "✅ Named corporate certificate '$CERT_NAME' found."
+        fi
+
+        shopt -s nullglob
+        CERT_FILES=("$CERT_DIR"/*.crt "$CERT_DIR"/*.pem)
+        shopt -u nullglob
+
+        if [ "${#CERT_FILES[@]}" -gt 0 ]; then
+          echo "✅ Found ${#CERT_FILES[@]} certificate(s) in $CERT_DIR. Updating system trust store..."
+          printf '   - %s\n' "${CERT_FILES[@]}"
+          update-ca-certificates
         else
-          echo "⚠️ Corporate certificate not found. Proceeding without it."
+          echo "⚠️ No corporate certificates found in $CERT_DIR. Proceeding without them."
         fi
         echo "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
         echo "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
