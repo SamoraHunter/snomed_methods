@@ -64,7 +64,7 @@ snomed-methods = "snomed_methods_v1:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["snomed_methods_v1.py", "snomed_term_lookup.py"]
+include = ["snomed_methods_v1.py", "snomed_term_lookup.py", "hybrid_search.py"]
 
 [tool.black]
 line-length = 88
@@ -95,8 +95,10 @@ lint.select = [
 "__init__.py" = ["F401"]
 "llm_concept_embedder.py" = ["T201", "E501", "C901"]
 "semantic_expansion.py" = ["C901", "B028", "E501"]
-"**/*.ipynb" = ["T201", "E402", "A004", "B007", "F821"]
-"test_*.py" = ["T201", "E501"]
+"tests/notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
+"notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
+"snomed_methods_examples.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
+"test_*.py" = ["T201", "E501", "C901", "B007"]
 "validate_notebooks.py" = ["C901", "T201"]
 [tool.mypy]
 python_version = "3.8"

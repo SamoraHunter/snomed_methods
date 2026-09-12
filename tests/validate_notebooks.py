@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate notebooks without leaving execution output artifacts."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -57,7 +58,9 @@ def validate_notebook(notebook_path: str) -> tuple[bool, list[str]]:
 
 
 def main():
-    notebooks_dir = Path("/workspaces/snomed_methods/notebooks")
+    project_root = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    notebooks_dir = project_root / "notebooks"
+
     notebooks = sorted(notebooks_dir.glob("*.ipynb"))
 
     print(f"Validating {len(notebooks)} notebooks...\n")

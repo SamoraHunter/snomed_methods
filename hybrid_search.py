@@ -1,0 +1,511 @@
+#!/usr/bin/env python3
+"""
+Hybrid Search Module for SNOMED CT
+
+Combines multiple search strategies with configurable re-ranking:
+1. Term matching (BM25-style substring/fuzzy matching)
+2. Hierarchy expansion (parent-child traversal)
+3. Embedding similarity (semantic vector search)
+
+Results are re-ranked using weighted combination of scores from each strategy.
+"""
+
+import os
+from typing import Dict, List, Tuple
+
+import numpy as np
+
+
+class HybridSearch:
+    """SNOMED CT hybrid search combining term matching, hierarchy expansion,
+    and embedding similarity with configurable re-ranking.
+    """
+
+    def __init__(
+        self,
+        uk_path: str = None,
+        medcat_path: str = None,
+        model_path: str = None,
+        backend: str = "transformers",
+        device: str = "cpu",
+    ):
+        """Initialize hybrid search with data paths.
+
+        Args:
+            uk_path: Path to UK Clinical RF2 directory
+            medcat_path: Path to MedCAT model pack (for semantic similarity)
+            model_path: Path to embedding model (e.g., SapBERT)
+            backend: Embedding backend ("transformers", "hf", or "ollama")
+            device: Device for embedding inference ("cpu" or "cuda")
+        """
+        self.uk_path = uk_path
+        self.medcat_path = medcat_path
+        self.model_path = model_path
+        self.backend = backend
+        self.device = device
+
+        self._term_lookup = None
+        self._snomed_relations = None
+        self._embedder = None
+        self.search_engine = None
+        self._cui_to_embedding = None
+
+        self._init_embedder()
+        self._init_term_lookup()
+        self._init_hierarchy()
+        self._init_medcat()
+        self._load_cached_embeddings_if_available()
+
+    def _init_embedder(self) -> None:
+        """Initialize embedding model and search engine."""
+        try:
+            from llm_concept_embedder import ClinicalConceptEmbedder
+
+            if self.model_path is not None:
+                self._embedder = ClinicalConceptEmbedder(
+                    model_name_or_path=self.model_path,
+                    backend=self.backend,
+                    device=self.device,
+                )
+        except ImportError:
+            pass
+
+    def _init_term_lookup(self) -> None:
+        """Initialize term lookup module."""
+        try:
+            from snomed_term_lookup import create_term_lookup_from_directory
+
+            if self.uk_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(script_dir)
+                self.uk_path = os.path.join(
+                    project_root,
+                    "uk_sct2cl_42.2.0",
+                    "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+                )
+
+            if os.path.exists(self.uk_path):
+                self._term_lookup = create_term_lookup_from_directory(self.uk_path)
+        except ImportError:
+            pass
+
+    def _init_hierarchy(self) -> None:
+        """Initialize hierarchy expansion."""
+        try:
+            from snomed_methods_v1 import SnomedRelations
+
+            if self.uk_path is None:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(script_dir)
+                self.uk_path = os.path.join(
+                    project_root,
+                    "uk_sct2cl_42.2.0",
+                    "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+                )
+
+            rel_file = os.path.join(
+                self.uk_path,
+                "Full",
+                "Terminology",
+                "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+            )
+
+            if os.path.exists(rel_file):
+                self._snomed_relations = SnomedRelations(snomed_rf2_full_path=rel_file)
+        except ImportError:
+            pass
+
+    def _init_medcat(self) -> None:
+        """Initialize MedCAT model for semantic similarity."""
+        self._medcat = None
+        try:
+            from medcat.cat import CAT
+
+            if self.medcat_path is not None and os.path.exists(self.medcat_path):
+                self._medcat = CAT.load_model_pack(self.medcat_path)
+            else:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(script_dir)
+                default_medcat_path = os.path.join(
+                    project_root,
+                    "model_packs",
+                    "medcat_model_pack_422d1d38fc58f158.zip",
+                )
+                if os.path.exists(default_medcat_path):
+                    self._medcat = CAT.load_model_pack(default_medcat_path)
+        except ImportError:
+            pass
+
+    def _load_cached_embeddings_if_available(self) -> None:
+        """Load cached embeddings from disk to avoid regeneration."""
+        from llm_concept_embedder import ConceptVectorSearch
+
+        if self._cui_to_embedding is not None:
+            return
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        cached_embeddings_path = os.path.join(
+            project_root,
+            "tests",
+            "notebooks",
+            "outputs",
+            "concept_embeddings.pkl",
+        )
+        if os.path.exists(cached_embeddings_path):
+            try:
+                self._cui_to_embedding = ConceptVectorSearch.load_embeddings_from_file(
+                    cached_embeddings_path
+                )
+            except Exception:
+                pass
+
+    def search(
+        self,
+        query: str,
+        top_k: int = 20,
+        term_weight: float = 0.3,
+        hierarchy_weight: float = 0.2,
+        embedding_weight: float = 0.5,
+        max_hierarchy_nodes: int = 100,
+    ) -> "SearchResult":
+        """Search for related SNOMED concepts using hybrid approach.
+
+        Args:
+            query: Input term(s) to search for
+            top_k: Number of results to return
+            term_weight: Weight for term matching score (0-1)
+            hierarchy_weight: Weight for hierarchy expansion score (0-1)
+            embedding_weight: Weight for embedding similarity score (0-1)
+            max_hierarchy_nodes: Maximum nodes to expand in hierarchy
+
+        Returns:
+            SearchResult object with ranked concepts and scores
+        """
+        if self._term_lookup is None:
+            raise ValueError(
+                "Term lookup not available. UK Clinical RF2 path required."
+            )
+
+        if self._snomed_relations is None:
+            raise ValueError(
+                "Hierarchy data not available. Relationship file required."
+            )
+
+        results = SearchResult()
+
+        query_lower = query.lower()
+        query_terms = [query_lower.strip()]
+
+        if " " in query_lower:
+            parts = query_lower.split()
+            query_terms.extend(parts)
+
+        term_results, cui_to_term_name = self._term_search(query_terms)
+        results.term_matches = len(term_results)
+        results.cui_to_term.update(cui_to_term_name)
+
+        hierarchy_cuis, hierarchy_scores = self._hierarchy_search(
+            list(term_results.keys())[:10], max_hierarchy_nodes
+        )
+        results.hierarchy_matches = len(hierarchy_cuis)
+        for cui, score in zip(hierarchy_cuis, hierarchy_scores):
+            if cui not in results.cui_scores:
+                results.cui_scores[cui] = {}
+            results.cui_scores[cui]["hierarchy"] = score
+
+        embedding_results, embed_scores = self._embedding_search(query, top_k * 2)
+        results.embedding_matches = len(embedding_results)
+        for i, (cui, name) in enumerate(embedding_results):
+            if cui not in results.cui_to_term:
+                results.cui_to_term[cui] = name
+            if cui not in results.cui_scores:
+                results.cui_scores[cui] = {}
+            results.cui_scores[cui]["embedding"] = embed_scores[i]
+
+        final_results = self._rank_results(
+            results.cui_scores, term_weight, hierarchy_weight, embedding_weight
+        )
+
+        for cui, combined_score in final_results[:top_k]:
+            results.results.append(
+                (cui, results.cui_to_term.get(cui, f"CUI: {cui}"), combined_score)
+            )
+
+        return results
+
+    def _term_search(
+        self, query_terms: List[str]
+    ) -> Tuple[Dict[str, float], Dict[str, str]]:
+        """Perform term-based searching."""
+        all_matches = {}
+        cui_to_name = {}
+
+        for q_term in query_terms:
+            if len(q_term) < 2:
+                continue
+
+            try:
+                matches = self._term_lookup.find_concepts_by_term(
+                    q_term, ignore_case=True, match_prefix=False
+                )
+
+                for cui, term_name in matches[:50]:
+                    score = 1.0 / (len(all_matches) + 1)
+                    if cui not in all_matches or score > all_matches[cui]:
+                        all_matches[cui] = score
+                        cui_to_name[cui] = term_name
+
+                prefix_matches = self._term_lookup.find_concepts_by_term(
+                    q_term, ignore_case=True, match_prefix=True
+                )
+
+                for cui, term_name in prefix_matches[:30]:
+                    prefix_score = 1.5 / (len(all_matches) + 1)
+                    if cui not in all_matches or prefix_score > all_matches[cui]:
+                        all_matches[cui] = prefix_score
+                        cui_to_name[cui] = term_name
+
+            except Exception:
+                pass
+
+        return all_matches, cui_to_name
+
+    def _hierarchy_search(
+        self, start_cuis: List[str], max_nodes: int
+    ) -> Tuple[List[str], List[float]]:
+        """Expand concepts via hierarchy traversal."""
+        if not self._snomed_relations or not start_cuis:
+            return [], []
+
+        visited = set()
+        queue = [(str(c), 0) for c in start_cuis if str(c) not in visited]
+        results = []
+        scores = []
+
+        while queue and len(visited) < max_nodes:
+            current, depth = queue.pop(0)
+
+            if current in visited:
+                continue
+            visited.add(current)
+
+            score = 1.0 / (depth + 1)
+            results.append(current)
+            scores.append(score)
+
+            try:
+                children = self._snomed_relations.get_children(int(current))
+                parents = self._snomed_relations.get_parents(int(current))
+
+                for child in children[:5]:
+                    if str(child) not in visited:
+                        queue.append((str(child), depth + 1))
+
+                for parent in parents[:3]:
+                    if str(parent) not in visited:
+                        queue.append((str(parent), depth + 1))
+
+            except (ValueError, TypeError):
+                continue
+
+        return results, scores
+
+    def _embedding_search(
+        self, query: str, top_k: int
+    ) -> Tuple[List[Tuple[str, str]], List[float]]:
+        """Search using embedding similarity."""
+        if self._embedder is None:
+            return [], []
+
+        try:
+            if (
+                self.search_engine is None
+                or not hasattr(self.search_engine, "index")
+                or self.search_engine.index is None
+            ):
+                cui_to_embedding = self._get_all_embeddings()
+                if len(cui_to_embedding) == 0:
+                    return [], []
+
+                names = {}
+                for cui in cui_to_embedding.keys():
+                    if (
+                        hasattr(self, "_medcat")
+                        and self._medcat
+                        and hasattr(self._medcat.cdb, "cui2preferred_name")
+                    ):
+                        name = self._medcat.cdb.cui2preferred_name.get(
+                            cui, f"CUI: {cui}"
+                        )
+                        names[cui] = name
+
+                from llm_concept_embedder import ConceptVectorSearch
+
+                self.search_engine = ConceptVectorSearch(
+                    {"embeddings": cui_to_embedding, "names": names},
+                    embedder=self._embedder,
+                )
+                self.search_engine.build_index(index_type="FlatIP")
+
+            results = self.search_engine.search(query, top_k=top_k)
+
+            if len(results) > 0 and isinstance(results[0], tuple):
+                return [(str(c), n) for c, n, _ in results], [s for _, _, s in results]
+        except Exception:
+            pass
+
+        return [], []
+
+    def _get_all_embeddings(self) -> Dict[str, np.ndarray]:
+        """Load or generate embeddings for all concepts."""
+        from llm_concept_embedder import ConceptVectorSearch, load_concepts_from_medcat
+
+        if self._cui_to_embedding is not None:
+            return self._cui_to_embedding
+
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(script_dir)
+            cached_embeddings_path = os.path.join(
+                project_root,
+                "tests",
+                "notebooks",
+                "outputs",
+                "concept_embeddings.pkl",
+            )
+            if os.path.exists(cached_embeddings_path):
+                cui_to_embedding = ConceptVectorSearch.load_embeddings_from_file(
+                    cached_embeddings_path
+                )
+                self._cui_to_embedding = cui_to_embedding
+                return cui_to_embedding
+
+            if hasattr(self, "_medcat") and self._medcat:
+                concept_df = load_concepts_from_medcat(self._medcat)
+            else:
+                return {}
+
+            texts = self._embedder.prepare_concept_text(concept_df)
+            embeddings = self._embedder.generate_embeddings(texts, batch_size=32)
+
+            cui_to_embedding = {}
+            for i, cui in enumerate(concept_df["cui"].tolist()):
+                cui_to_embedding[cui] = embeddings[i]
+
+            self._cui_to_embedding = cui_to_embedding
+            return cui_to_embedding
+
+        except Exception:
+            return {}
+
+    def _rank_results(
+        self, scores: Dict[str, dict], term_w: float, hier_w: float, embed_w: float
+    ) -> List[Tuple[str, float]]:
+        """Rank results using weighted combination of scores."""
+        combined_scores = []
+
+        for cui in scores:
+            term_score = scores[cui].get("term", 0)
+            hier_score = scores[cui].get("hierarchy", 0)
+            embed_score = scores[cui].get("embedding", 0)
+
+            norm_term = min(term_score / 1.0, 1.0) if term_score > 0 else 0
+            norm_hier = min(hier_score / 1.0, 1.0) if hier_score > 0 else 0
+            norm_embed = embed_score
+
+            combined = term_w * norm_term + hier_w * norm_hier + embed_w * norm_embed
+
+            combined_scores.append((cui, combined))
+
+        combined_scores.sort(key=lambda x: x[1], reverse=True)
+        return combined_scores
+
+
+class SearchResult:
+    """Container for hybrid search results."""
+
+    def __init__(self):
+        self.results: List[Tuple[str, str, float]] = []
+        self.cui_to_term: Dict[str, str] = {}
+        self.cui_scores: Dict[str, dict] = {}
+        self.term_matches: int = 0
+        self.hierarchy_matches: int = 0
+        self.embedding_matches: int = 0
+
+    @property
+    def cuis(self) -> List[str]:
+        return [c for c, _, _ in self.results]
+
+    @property
+    def terms(self) -> List[str]:
+        return [t for _, t, _ in self.results]
+
+    @property
+    def scores(self) -> List[float]:
+        return [s for _, _, s in self.results]
+
+    def to_dict(self) -> dict:
+        return {
+            "results": [
+                {"cui": c, "term": t, "score": round(s, 4)} for c, t, s in self.results
+            ],
+            "metrics": {
+                "term_matches": self.term_matches,
+                "hierarchy_matches": self.hierarchy_matches,
+                "embedding_matches": self.embedding_matches,
+            },
+        }
+
+    def __len__(self) -> int:
+        return len(self.results)
+
+    def __repr__(self) -> str:
+        m = self.to_dict()["metrics"]
+        return (
+            f"HybridSearchResult(total={len(self)}, term={m['term_matches']}, "
+            f"hier={m['hierarchy_matches']}, embed={m['embedding_matches']})"
+        )
+
+
+def expand_concepts(
+    term_or_terms,
+    uk_path: str = None,
+    medcat_path: str = None,
+    model_path: str = None,
+    backend: str = "transformers",
+    device: str = "cpu",
+    top_k: int = 20,
+    term_weight: float = 0.3,
+    hierarchy_weight: float = 0.2,
+    embedding_weight: float = 0.5,
+) -> SearchResult:
+    """Convenience function for hybrid concept expansion.
+
+    Args:
+        term_or_terms: Input term(s)
+        uk_path: Path to SNOMED UK Clinical RF2
+        medcat_path: Path to MedCAT model pack
+        model_path: Path to embedding model
+        backend: Embedding backend
+        device: Device for embeddings
+        top_k: Number of results
+        term_weight, hierarchy_weight, embedding_weight: Re-ranking weights
+
+    Returns:
+        SearchResult object with ranked concepts
+    """
+    searcher = HybridSearch(
+        uk_path=uk_path,
+        medcat_path=medcat_path,
+        model_path=model_path,
+        backend=backend,
+        device=device,
+    )
+    return searcher.search(
+        term_or_terms,
+        top_k=top_k,
+        term_weight=term_weight,
+        hierarchy_weight=hierarchy_weight,
+        embedding_weight=embedding_weight,
+    )

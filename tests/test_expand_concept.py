@@ -1,12 +1,18 @@
+import os
 import sys
 
 sys.path.insert(0, "..")
 
 from snomed_term_lookup import create_term_lookup_from_directory
 
-lookup = create_term_lookup_from_directory(
-    "/workspaces/snomed_methods/uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z"
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+uk_snomed_dir = os.path.join(
+    PROJECT_ROOT,
+    "uk_sct2cl_42.2.0",
+    "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
 )
+
+lookup = create_term_lookup_from_directory(uk_snomed_dir)
 
 concepts = [438181000000108, 127579001, 409681000000102]
 

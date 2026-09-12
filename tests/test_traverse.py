@@ -1,10 +1,19 @@
+import os
 import sys
 
 sys.path.insert(0, "..")
 
 from snomed_methods_v1 import SnomedRelations
 
-rel_file = "/workspaces/snomed_methods/uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z/Full/Terminology/sct2_Relationship_UKCLFull_GB1000000_20260603.txt"
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+rel_file = os.path.join(
+    PROJECT_ROOT,
+    "uk_sct2cl_42.2.0",
+    "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    "Full",
+    "Terminology",
+    "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+)
 
 snomed = SnomedRelations(snomed_rf2_full_path=rel_file, medcat=False)
 

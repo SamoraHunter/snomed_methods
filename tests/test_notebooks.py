@@ -31,9 +31,15 @@ def test_notebook(notebook_path: str) -> tuple[bool, list[str]]:
         tmp_nb = Path(tmpdir) / notebook.name
         shutil.copy2(notebook, tmp_nb)
 
-        # Run nbconvert to execute the notebook (in place in temp dir)
+        python_bin = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "snomed_methods_env",
+            "bin",
+            "python",
+        )
         cmd = (
-            f"/workspaces/snomed_methods/snomed_methods_env/bin/python -m nbconvert "
+            f'"{python_bin}" -m nbconvert '
             f"--to notebook --execute {tmp_nb} "
             f"--output {tmp_nb.stem}_tested.ipynb"
         )
@@ -48,7 +54,8 @@ def test_notebook(notebook_path: str) -> tuple[bool, list[str]]:
 
 def main():
     """Test all notebooks in the notebooks directory."""
-    notebooks_dir = Path("/workspaces/snomed_methods/notebooks")
+    project_root = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    notebooks_dir = project_root / "notebooks"
 
     notebooks = sorted(notebooks_dir.glob("*.ipynb"))
 

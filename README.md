@@ -58,7 +58,12 @@ codes, names = relations.expand_codes(
 - **Code Expansion**: Automatically expand concept codes through recursive hierarchy traversal
 - **MedCAT Integration**: Combine MedCAT entity recognition with SNOMED CT terminology
 - **Snowstorm API Support**: Access remote Snowstorm terminology server API
-- **Concept Embeddings**: LLM-based semantic embeddings using Hugging Face Transformers models and Ollama
+- **Concept Embeddings**: LLM-based semantic embeddings for biomedical concepts using:
+  - Local Hugging Face Transformers models (e.g., SapBERT, BioBERT)
+  - SentenceTransformer models
+  - Ollama API compatibility
+
+**Note**: For detailed information on the Concept Embeddings module including usage examples and backend configuration, see the [Concept Embeddings](#concept-embeddings) section below.
 
 ## Concept Embeddings
 
