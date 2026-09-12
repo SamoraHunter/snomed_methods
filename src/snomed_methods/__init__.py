@@ -24,6 +24,27 @@ from src.snomed_methods.snomed_term_lookup import (
     create_term_lookup_from_directory,
 )
 
+
+def _get_umls_mapper():
+    """Lazy import for UMLSCIMapper to avoid torch dependency."""
+    try:
+        from src.snomed_methods.umlsci_mapper import (
+            UMLSCIMapper,
+            batch_map_to_umls,
+            map_from_umls,
+            map_to_umls,
+        )
+
+        return {
+            "UMLSCIMapper": UMLSCIMapper,
+            "batch_map_to_umls": batch_map_to_umls,
+            "map_from_umls": map_from_umls,
+            "map_to_umls": map_to_umls,
+        }
+    except ImportError:
+        return {}
+
+
 __all__ = [
     "SnomedRelations",
     "SnomedTermLookup",
@@ -40,3 +61,9 @@ __all__ = [
     "map_concept",
     "batch_map_concepts",
 ]
+
+# Add UMLSCIMapper components if available
+_umls_components = _get_umls_mapper()
+__all__.extend(_umls_components.keys())
+
+globals().update(_umls_components)
