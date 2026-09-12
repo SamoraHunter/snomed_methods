@@ -152,16 +152,20 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
 
     def test_ollama_init_with_custom_url(self):
         """Test Ollama backend initialization with custom URL."""
-        from llm_concept_embedder import ClinicalConceptEmbedder
+        from unittest.mock import MagicMock, patch
 
-        embedder = ClinicalConceptEmbedder(
-            model_name_or_path="test-model",
-            backend="ollama",
-            ollama_base_url="http://custom-host:12345",
-        )
+        mock_ollama = MagicMock()
+        with patch.dict("sys.modules", {"ollama": mock_ollama}):
+            from llm_concept_embedder import ClinicalConceptEmbedder
 
-        self.assertEqual(embedder.ollama_base_url, "http://custom-host:12345")
-        self.assertEqual(embedder.backend, "ollama")
+            embedder = ClinicalConceptEmbedder(
+                model_name_or_path="test-model",
+                backend="ollama",
+                ollama_base_url="http://custom-host:12345",
+            )
+
+            self.assertEqual(embedder.ollama_base_url, "http://custom-host:12345")
+            self.assertEqual(embedder.backend, "ollama")
 
 
 class TestConceptVectorSearch(unittest.TestCase):
@@ -182,28 +186,47 @@ class TestConceptVectorSearch(unittest.TestCase):
 
     def test_build_index(self):
         """Test building FAISS index."""
+        from unittest.mock import MagicMock, patch
+
         from llm_concept_embedder import ConceptVectorSearch
 
-        search = ConceptVectorSearch(self.test_embeddings)
-        search.build_index(index_type="FlatIP")
+        mock_faiss = MagicMock()
+        mock_index = MagicMock()
+        mock_faiss.IndexFlatIP.return_value = mock_index
+        mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-        self.assertIsNotNone(search.index)
-        self.assertEqual(len(search.cui_list), 3)
+        with patch.dict("sys.modules", {"faiss": mock_faiss}):
+            search = ConceptVectorSearch(self.test_embeddings)
+            search.build_index(index_type="FlatIP")
+
+            self.assertIsNotNone(search.index)
+            self.assertEqual(len(search.cui_list), 3)
 
     def test_build_index_with_names(self):
         """Test building index with cui_to_name mapping."""
+        from unittest.mock import MagicMock, patch
+
         from llm_concept_embedder import ConceptVectorSearch
 
-        search = ConceptVectorSearch(
-            {"embeddings": self.test_embeddings, "names": self.test_names}
-        )
-        search.build_index()
+        mock_faiss = MagicMock()
+        mock_index = MagicMock()
+        mock_faiss.IndexFlatIP.return_value = mock_index
+        mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-        self.assertEqual(len(search.cui_list), 3)
-        self.assertEqual(search.cui_to_name["C001"], "Meningioma")
+        with patch.dict("sys.modules", {"faiss": mock_faiss}):
+            search = ConceptVectorSearch(
+                {"embeddings": self.test_embeddings, "names": self.test_names}
+            )
+            search.build_index()
+
+            self.assertEqual(len(search.cui_list), 3)
+            self.assertEqual(search.cui_to_name["C001"], "Meningioma")
 
     def test_search_returns_results(self):
         """Test search returns valid results."""
+        import os
+        from unittest.mock import MagicMock, patch
+
         from llm_concept_embedder import ConceptVectorSearch
 
         with TemporaryDirectory() as tmpdir:
@@ -211,42 +234,71 @@ class TestConceptVectorSearch(unittest.TestCase):
             with open(pkl_path, "wb") as f:
                 pickle.dump({"embeddings": self.test_embeddings}, f)
 
-            search = ConceptVectorSearch(
-                pkl_path,
-                cui_to_name=self.test_names,
+            mock_faiss = MagicMock()
+            mock_index = MagicMock()
+            mock_index.search.return_value = (
+                np.array([[0.95, 0.85, 0.75]]),
+                np.array([[0, 1, 2]]),
             )
-            search.build_index(index_type="FlatIP")
+            mock_faiss.IndexFlatIP.return_value = mock_index
+            mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-            results = search.search(
-                query_embedding=np.random.randn(3).astype(np.float32), top_k=3
-            )
+            with patch.dict("sys.modules", {"faiss": mock_faiss}):
+                search = ConceptVectorSearch(
+                    pkl_path,
+                    cui_to_name=self.test_names,
+                )
+                search.build_index(index_type="FlatIP")
 
-            self.assertGreater(len(results), 0)
-            for cui, name, score in results:
-                self.assertIsNotNone(cui)
-                self.assertIsInstance(name, str)
-                self.assertIsInstance(score, float)
+                results = search.search(
+                    query_embedding=np.random.randn(3).astype(np.float32), top_k=3
+                )
+
+                self.assertGreater(len(results), 0)
+                for cui, name, score in results:
+                    self.assertIsNotNone(cui)
+                    self.assertIsInstance(name, str)
+                    self.assertIsInstance(score, float)
 
     def test_search_with_prebuilt_index(self):
         """Test query with pre-built index."""
+        from unittest.mock import MagicMock, patch
+
         from llm_concept_embedder import ConceptVectorSearch
 
-        search = ConceptVectorSearch(
-            {"embeddings": self.test_embeddings, "names": self.test_names}
+        mock_faiss = MagicMock()
+        mock_index = MagicMock()
+        mock_index.search.return_value = (
+            np.array([[0.95]]),
+            np.array([[0]]),
         )
-        search.build_index()
+        mock_faiss.IndexFlatIP.return_value = mock_index
+        mock_faiss.IndexHNSWFlat.return_value = mock_index
 
-        # Query vector near C001 (should return it as top result)
-        query_vec = np.array([0.12, 0.22, 0.32], dtype=np.float32)
+        with patch.dict("sys.modules", {"faiss": mock_faiss}):
+            search = ConceptVectorSearch(
+                {"embeddings": self.test_embeddings, "names": self.test_names}
+            )
+            search.build_index()
 
-        results = search.search(query_embedding=query_vec, top_k=1)
+            query_vec = np.array([0.12, 0.22, 0.32], dtype=np.float32)
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0][0], "C001")
+            results = search.search(query_embedding=query_vec, top_k=1)
+
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0][0], "C001")
 
     def test_load_embeddings_from_pkl_file(self):
         """Test loading embeddings from pickle file."""
+        import os
+        from unittest.mock import MagicMock, patch
+
         from llm_concept_embedder import ConceptVectorSearch
+
+        mock_faiss = MagicMock()
+        mock_index = MagicMock()
+        mock_faiss.IndexFlatIP.return_value = mock_index
+        mock_faiss.IndexHNSWFlat.return_value = mock_index
 
         with TemporaryDirectory() as tmpdir:
             pkl_path = os.path.join(tmpdir, "test.pkl")
@@ -257,11 +309,12 @@ class TestConceptVectorSearch(unittest.TestCase):
             with open(pkl_path, "wb") as f:
                 pickle.dump(data, f)
 
-            search = ConceptVectorSearch(pkl_path)
-            search.build_index()
+            with patch.dict("sys.modules", {"faiss": mock_faiss}):
+                search = ConceptVectorSearch(pkl_path)
+                search.build_index()
 
-            self.assertEqual(len(search.cui_list), 3)
-            self.assertEqual(search.cui_to_name["C001"], "Meningioma")
+                self.assertEqual(len(search.cui_list), 3)
+                self.assertEqual(search.cui_to_name["C001"], "Meningioma")
 
     def test_embedder_reuse_for_query(self):
         """Test that embedder is reused for query embedding."""
