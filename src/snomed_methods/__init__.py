@@ -1,3 +1,10 @@
+from src.snomed_methods.concept_annotator import (
+    AnnotationResult,
+    ClinicalConceptAnnotator,
+    MatchedConcept,
+    annotate_text,
+    batch_annotate_texts,
+)
 from src.snomed_methods.concept_mapper import (
     ConceptMapper,
     batch_map_concepts,
@@ -57,6 +64,11 @@ __all__ = [
     "SemanticSearch",
     "SearchResults",
     "expand_concepts",
+    "AnnotationResult",
+    "MatchedConcept",
+    "ClinicalConceptAnnotator",
+    "annotate_text",
+    "batch_annotate_texts",
     "ConceptMapper",
     "map_concept",
     "batch_map_concepts",

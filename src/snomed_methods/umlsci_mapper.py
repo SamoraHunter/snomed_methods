@@ -45,7 +45,7 @@ class UMLSCIMapper:
                 if simple_maps:
                     self.simple_map_file = os.path.join(
                         map_dir, sorted(simple_maps)[-1]
-                )
+                    )
 
     def load_snomed_to_umls(self) -> Dict[str, List[dict]]:
         """Load SNOMED CT to UMLS CUI mappings."""
@@ -177,11 +177,10 @@ class UMLSCIMapper:
                 "umls_cui": concept_id,
                 "snomed_concepts": self.map_from_umls(concept_id),
             }
-        else:
-            return {
-                "snomed_cui": str(concept_id),
-                "umls_cuis": self.map_to_umls(concept_id),
-            }
+        return {
+            "snomed_cui": str(concept_id),
+            "umls_cuis": self.map_to_umls(concept_id),
+        }
 
     def export_mappings(self, concepts: List[str], output_path: str) -> int:
         """Export SNOMED-to-UMLS mappings to CSV."""
