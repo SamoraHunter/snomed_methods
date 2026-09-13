@@ -17,7 +17,7 @@ class TestUMLSCIMapper:
 
     def test_initialization_with_paths(self):
         """Test initialization with explicit file paths."""
-        from src.snomed_results.umlsci_mapper import UMLSCIMapper
+        from src.snomed_methods.umlsci_mapper import UMLSCIMapper
 
         mapper = UMLSCIMapper(
             uk_path="/test/path",

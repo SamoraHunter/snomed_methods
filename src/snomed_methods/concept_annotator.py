@@ -189,8 +189,7 @@ class ClinicalConceptAnnotator:
         keywords = [w for w in words if len(w) >= 4]
 
         # Combine and deduplicate
-        terms = list(dict.fromkeys(ngrams + keywords))[:10]
-        return terms
+        return list(dict.fromkeys(ngrams + keywords))[:10]
 
     def _score_concepts_from_terms(
         self, concepts: Dict[str, str], text_terms: List[str]
@@ -248,7 +247,7 @@ class ClinicalConceptAnnotator:
             return result
 
         # Use hybrid search to find related concepts
-        HybridSearch = None
+        _hybrid_search = None
         try:
             from src.snomed_methods import HybridSearch
         except ImportError:
@@ -280,7 +279,7 @@ class ClinicalConceptAnnotator:
         )
 
         # Compute scores and build results
-        for concept_id, concept in scored_concepts.items():
+        for _concept_id, concept in scored_concepts.items():
             concept.compute_total_score()
             result.concept_matches.append(concept)
 

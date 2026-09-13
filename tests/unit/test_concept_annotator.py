@@ -190,12 +190,10 @@ class TestConvenienceFunctions:
 
     def test_annotate_text(self):
         """Test annotate_text convenience function."""
-        from src.snomed_methods.concept_annotator import annotate_text
+        from src.snomed_methods.concept_annotator import AnnotationResult, annotate_text
 
         result = annotate_text("patient has fever")
-        assert isinstance(result, type)
-        # Will fail if HybridSearch unavailable but should not crash import
-        assert hasattr(result, "annotate")
+        assert isinstance(result, AnnotationResult)
 
     def test_batch_annotate_texts(self):
         """Test batch_annotate_texts convenience function."""
