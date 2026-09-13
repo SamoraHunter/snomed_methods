@@ -169,6 +169,12 @@ def evaluate_model(
 
     for pair in dataset_pairs:
         score = model_func(pair["text_1"], pair["text_2"])
+
+        # Normalize scores to 0-1000 scale if they appear to be [0,1]
+        # Detection: values between 0 and 1 are likely normalized
+        if 0 <= score <= 1:
+            score = score * 1000
+
         predictions.append(score)
         references.append(pair["label"])
 
