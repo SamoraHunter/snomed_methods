@@ -45,7 +45,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             )
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -66,7 +66,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             mock_model = MagicMock()
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -97,7 +97,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             mock_model = MagicMock()
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -126,7 +126,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             mock_model = MagicMock()
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -145,7 +145,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             mock_model = MagicMock()
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -171,7 +171,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
             mock_model = MagicMock()
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="sentence-transformers/all-MiniLM-L6-v2",
@@ -197,7 +197,7 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
 
         mock_ollama = MagicMock()
         with patch.dict("sys.modules", {"ollama": mock_ollama}):
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             embedder = ClinicalConceptEmbedder(
                 model_name_or_path="test-model",
@@ -228,7 +228,7 @@ class TestConceptVectorSearch(unittest.TestCase):
     def test_build_index(self):
         """Test building FAISS index."""
         with patch.dict("sys.modules", {"faiss": MagicMock()}):
-            from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+            from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
             mock_faiss = sys.modules["faiss"]
             mock_index = MagicMock()
@@ -244,7 +244,7 @@ class TestConceptVectorSearch(unittest.TestCase):
     def test_build_index_with_names(self):
         """Test building index with cui_to_name mapping."""
         with patch.dict("sys.modules", {"faiss": MagicMock()}):
-            from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+            from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
             mock_faiss = sys.modules["faiss"]
             mock_index = MagicMock()
@@ -264,7 +264,7 @@ class TestConceptVectorSearch(unittest.TestCase):
         import os
         from unittest.mock import MagicMock, patch
 
-        from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+        from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
         with TemporaryDirectory() as tmpdir:
             pkl_path = os.path.join(tmpdir, "test.pkl")
@@ -301,7 +301,7 @@ class TestConceptVectorSearch(unittest.TestCase):
         """Test query with pre-built index."""
         from unittest.mock import MagicMock, patch
 
-        from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+        from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
         mock_faiss = MagicMock()
         mock_index = MagicMock()
@@ -330,7 +330,7 @@ class TestConceptVectorSearch(unittest.TestCase):
         import os
         from unittest.mock import MagicMock, patch
 
-        from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+        from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
         mock_faiss = MagicMock()
         mock_index = MagicMock()
@@ -355,7 +355,7 @@ class TestConceptVectorSearch(unittest.TestCase):
 
     def test_embedder_reuse_for_query(self):
         """Test that embedder is reused for query embedding."""
-        from src.snomed_methods.llm_concept_embedder import ConceptVectorSearch
+        from snomed_methods.llm_concept_embedder import ConceptVectorSearch
 
         class MockEmbedder:
             def __init__(self):
@@ -387,7 +387,7 @@ class TestIntegration(unittest.TestCase):
             )
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             concepts = pd.DataFrame(
                 [
@@ -421,7 +421,7 @@ class TestIntegration(unittest.TestCase):
             mock_model.encode.side_effect = encode_side_effect
             mock_st.return_value = mock_model
 
-            from src.snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
 
             _ = pd.DataFrame([{"cui": "1", "preferred_name": "test"}] * 5)
             embedder = ClinicalConceptEmbedder(

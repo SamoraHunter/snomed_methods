@@ -8,7 +8,7 @@ class TestMatchedConcept:
 
     def test_initialization(self):
         """Test concept initialization."""
-        from src.snomed_methods.concept_annotator import MatchedConcept
+        from snomed_methods.concept_annotator import MatchedConcept
 
         concept = MatchedConcept("409681000000102", "Meningioma")
         assert concept.concept_id == "409681000000102"
@@ -16,7 +16,7 @@ class TestMatchedConcept:
 
     def test_add_term_score(self):
         """Test adding term scores."""
-        from src.snomed_methods.concept_annotator import MatchedConcept
+        from snomed_methods.concept_annotator import MatchedConcept
 
         concept = MatchedConcept("409681000000102", "Meningioma")
         concept.add_term_score("meningioma", 0.8)
@@ -27,7 +27,7 @@ class TestMatchedConcept:
 
     def test_add_term_score_overwrites_lower(self):
         """Test term score overwrites if higher."""
-        from src.snomed_methods.concept_annotator import MatchedConcept
+        from snomed_methods.concept_annotator import MatchedConcept
 
         concept = MatchedConcept("409681000000102", "Meningioma")
         concept.add_term_score("meningioma", 0.5)
@@ -37,7 +37,7 @@ class TestMatchedConcept:
 
     def test_best_term(self):
         """Test best term property."""
-        from src.snomed_methods.concept_annotator import MatchedConcept
+        from snomed_methods.concept_annotator import MatchedConcept
 
         concept = MatchedConcept("409681000000102", "Meningioma")
         assert concept.best_term is None
@@ -51,7 +51,7 @@ class TestMatchedConcept:
 
     def test_compute_total_score(self):
         """Test total score computation."""
-        from src.snomed_methods.concept_annotator import MatchedConcept
+        from snomed_methods.concept_annotator import MatchedConcept
 
         concept = MatchedConcept("409681000000102", "Meningioma")
         concept.add_term_score("meningioma", 0.8)
@@ -70,7 +70,7 @@ class TestAnnotationResult:
 
     def test_initialization(self):
         """Test result initialization."""
-        from src.snomed_methods.concept_annotator import AnnotationResult
+        from snomed_methods.concept_annotator import AnnotationResult
 
         result = AnnotationResult()
         assert len(result) == 0
@@ -79,7 +79,7 @@ class TestAnnotationResult:
 
     def test_add_concepts(self):
         """Test adding concepts to result."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             AnnotationResult,
             MatchedConcept,
         )
@@ -100,7 +100,7 @@ class TestAnnotationResult:
 
     def test_to_dict(self):
         """Test result to dictionary conversion."""
-        from src.snomed_methods.concept_annotator import AnnotationResult
+        from snomed_methods.concept_annotator import AnnotationResult
 
         result = AnnotationResult()
         result.text_terms = [("chest pain", 1.0)]
@@ -118,7 +118,7 @@ class TestClinicalConceptAnnotator:
 
     def test_initialization(self):
         """Test annotator initialization."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -128,7 +128,7 @@ class TestClinicalConceptAnnotator:
 
     def test_preprocess_text_short(self):
         """Test preprocessing short text."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -139,7 +139,7 @@ class TestClinicalConceptAnnotator:
 
     def test_preprocess_text_long(self):
         """Test preprocessing longer text."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -152,7 +152,7 @@ class TestClinicalConceptAnnotator:
 
     def test_annotate_empty_text(self):
         """Test annotate with empty text."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -164,7 +164,7 @@ class TestClinicalConceptAnnotator:
 
     def test_annotate_none_text(self):
         """Test annotate with None text."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -175,7 +175,7 @@ class TestClinicalConceptAnnotator:
 
     def test_batch_annotate(self):
         """Test batch annotation."""
-        from src.snomed_methods.concept_annotator import (
+        from snomed_methods.concept_annotator import (
             ClinicalConceptAnnotator,
         )
 
@@ -190,14 +190,14 @@ class TestConvenienceFunctions:
 
     def test_annotate_text(self):
         """Test annotate_text convenience function."""
-        from src.snomed_methods.concept_annotator import AnnotationResult, annotate_text
+        from snomed_methods.concept_annotator import AnnotationResult, annotate_text
 
         result = annotate_text("patient has fever")
         assert isinstance(result, AnnotationResult)
 
     def test_batch_annotate_texts(self):
         """Test batch_annotate_texts convenience function."""
-        from src.snomed_methods.concept_annotator import batch_annotate_texts
+        from snomed_methods.concept_annotator import batch_annotate_texts
 
         result = batch_annotate_texts(["chest pain", "headache"])
         assert isinstance(result, dict)

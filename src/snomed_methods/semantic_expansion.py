@@ -35,7 +35,7 @@ import importlib.util
 import os
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from src.snomed_methods.snomed_term_lookup import SnomedTermLookup
+from snomed_methods.snomed_term_lookup import SnomedTermLookup
 
 
 class SemanticSearch:
@@ -184,7 +184,7 @@ class SemanticSearch:
 
         lookup: Optional[SnomedTermLookup] = None
         if importlib.util.find_spec("snomed_term_lookup") is not None:
-            from src.snomed_methods.snomed_term_lookup import (
+            from snomed_methods.snomed_term_lookup import (
                 create_term_lookup_from_directory,
             )
 
@@ -264,7 +264,7 @@ class SemanticSearch:
         )
 
         try:
-            from src.snomed_methods.snomed_methods_v1 import SnomedRelations
+            from snomed_methods.snomed_methods_v1 import SnomedRelations
 
             snomed = SnomedRelations(medcat=True, snomed_rf2_full_path=snomed_path)
         except Exception:
@@ -369,7 +369,7 @@ class SemanticSearch:
                 "snomed-term-lookup package required. Install with: pip install snomed-term-lookup"
             )
 
-        from src.snomed_methods.snomed_term_lookup import (
+        from snomed_methods.snomed_term_lookup import (
             create_term_lookup_from_directory,
         )
 

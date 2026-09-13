@@ -1,32 +1,32 @@
-from src.snomed_methods.concept_annotator import (
+from snomed_methods.concept_annotator import (
     AnnotationResult,
     ClinicalConceptAnnotator,
     MatchedConcept,
     annotate_text,
     batch_annotate_texts,
 )
-from src.snomed_methods.concept_mapper import (
+from snomed_methods.concept_mapper import (
     ConceptMapper,
     batch_map_concepts,
     map_concept,
 )
-from src.snomed_methods.hybrid_search import (
+from snomed_methods.hybrid_search import (
     HybridSearch,
     SearchResult,
     semantic_filter_results,
 )
-from src.snomed_methods.llm_concept_embedder import (
+from snomed_methods.llm_concept_embedder import (
     ClinicalConceptEmbedder,
     ConceptVectorSearch,
     load_concepts_from_medcat,
 )
-from src.snomed_methods.semantic_expansion import (
+from snomed_methods.semantic_expansion import (
     SearchResults,
     SemanticSearch,
     expand_concepts,
 )
-from src.snomed_methods.snomed_methods_v1 import SnomedRelations
-from src.snomed_methods.snomed_term_lookup import (
+from snomed_methods.snomed_methods_v1 import SnomedRelations
+from snomed_methods.snomed_term_lookup import (
     SnomedTermLookup,
     create_term_lookup_from_directory,
 )
@@ -35,7 +35,7 @@ from src.snomed_methods.snomed_term_lookup import (
 def _get_umls_mapper():
     """Lazy import for UMLSCIMapper to avoid torch dependency."""
     try:
-        from src.snomed_methods.umlsci_mapper import (
+        from snomed_methods.umlsci_mapper import (
             UMLSCIMapper,
             batch_map_to_umls,
             map_from_umls,
