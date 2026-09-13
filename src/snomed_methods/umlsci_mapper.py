@@ -47,11 +47,8 @@ class UMLSCIMapper:
                         map_dir, sorted(simple_maps)[-1]
                     )
 
-    def load_snomed_to_umls(self) -> Dict[str, List[dict]]:
-        """Load SNOMED CT to UMLS CUI mappings."""
-        if self._snomed_to_umls:
-            return self._snomed_to_umls
-
+    def _get_mapping_files(self) -> List[str]:
+        """Get list of mapping files to process."""
         files = []
         if self.simple_map_file and os.path.exists(self.simple_map_file):
             files.append(self.simple_map_file)
@@ -59,6 +56,44 @@ class UMLSCIMapper:
             self._auto_detect_paths()
             if self.simple_map_file:
                 files.append(self.simple_map_file)
+        return files
+
+    def _process_mapping_row(self, row: object, file_path: str) -> Optional[tuple]:
+        """Process a single mapping row and return (snomed_cui, mapping) or None."""
+        if not row.get("active"):
+            return None
+
+        snomed_cui = str(row.get("referencedComponentId", "")).strip()
+        map_target = str(row.get("mapTarget", "")).strip()
+
+        if not self._is_umls_cui(map_target):
+            return None
+
+        mapping = {
+            "umls_cui": map_target,
+            "confidence": 0.75,
+            "source": os.path.basename(file_path),
+        }
+
+        return (snomed_cui, mapping)
+
+    def _add_mapping(self, snomed_cui: str, mapping: dict) -> Optional[dict]:
+        """Add a mapping if not already present. Returns updated mapping or None."""
+        if snomed_cui not in self._snomed_to_umls:
+            self._snomed_to_umls[snomed_cui] = []
+
+        existing = {m["umls_cui"] for m in self._snomed_to_umls[snomed_cui]}
+        if mapping["umls_cui"] not in existing:
+            self._snomed_to_umls[snomed_cui].append(mapping)
+            return mapping
+        return None
+
+    def load_snomed_to_umls(self) -> Dict[str, List[dict]]:
+        """Load SNOMED CT to UMLS CUI mappings."""
+        if self._snomed_to_umls:
+            return self._snomed_to_umls
+
+        files = self._get_mapping_files()
 
         try:
             import pandas as pd
@@ -67,27 +102,11 @@ class UMLSCIMapper:
                 df = pd.read_csv(file_path, sep="\t", low_memory=False)
 
                 for _, row in df.iterrows():
-                    if not row.get("active"):
+                    result = self._process_mapping_row(row, file_path)
+                    if result is None:
                         continue
-
-                    snomed_cui = str(row.get("referencedComponentId", "")).strip()
-                    map_target = str(row.get("mapTarget", "")).strip()
-
-                    if not self._is_umls_cui(map_target):
-                        continue
-
-                    if snomed_cui not in self._snomed_to_umls:
-                        self._snomed_to_umls[snomed_cui] = []
-
-                    mapping = {
-                        "umls_cui": map_target,
-                        "confidence": 0.75,
-                        "source": os.path.basename(file_path),
-                    }
-
-                    existing = {m["umls_cui"] for m in self._snomed_to_umls[snomed_cui]}
-                    if map_target not in existing:
-                        self._snomed_to_umls[snomed_cui].append(mapping)
+                    snomed_cui, mapping = result
+                    self._add_mapping(snomed_cui, mapping)
 
             return self._snomed_to_umls
 
