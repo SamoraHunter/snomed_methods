@@ -606,6 +606,37 @@ class ConceptMapper:
 
         return count
 
+    def batch_map_concepts(
+        self,
+        snomed_cuis: List[str],
+        target_vocabs: Optional[List[str]] = None,
+    ) -> dict:
+        """Batch map multiple SNOMED concepts.
+
+        Args:
+            snomed_cuis: List of SNOMED CT Concept IDs
+            target_vocabs: List of target vocabularies (default: all available)
+
+        Returns:
+            Dictionary mapping each CUI to its mappings
+        """
+        if target_vocabs is None:
+            target_vocabs = ["ICD-10", "LOINC", "RxNorm"]
+
+        results = {}
+
+        for cui in snomed_cuis:
+            results[str(cui)] = {}
+            for vocab in target_vocabs:
+                if vocab.upper() == "ICD-10":
+                    results[str(cui)][vocab] = self.map_to_icd(cui)
+                elif vocab.upper() == "LOINC":
+                    results[str(cui)][vocab] = self.map_to_loinc(cui)
+                elif vocab.upper() == "RXNORM":
+                    results[str(cui)][vocab] = self.map_to_rxnorm(cui)
+
+        return results
+
 
 def map_concept(
     snomed_cui: str,
