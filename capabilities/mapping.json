@@ -1,1 +1,238 @@
-{"name":"Concept Mapping","version":"1.0","category":"mapping","description":"Map SNOMED CT concepts to ICD-10, LOINC, RxNorm"}
+{
+  "name": "Concept Mapping",
+  "version": "1.0",
+  "category": "mapping",
+  "description": "Map SNOMED CT concepts to other terminologies including ICD-10, LOINC, RxNorm, and UMLS CUIs with confidence scores and source tracking",
+  "classes": [
+    {
+      "name": "ConceptMapper",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize mapper with SNOMED data paths",
+          "parameters": [
+            {"name": "uk_path", "type": "str", "required": false, "default": null},
+            {"name": "icd_map_file", "type": "str", "required": false, "default": null},
+            {"name": "loinc_map_file", "type": "str", "required": false, "default": null}
+          ]
+        },
+        {
+          "name": "_auto_detect_paths",
+          "description": "Automatically detect mapping files from UK Clinical RF2 directory",
+          "parameters": [],
+          "returns": {"type": "None"}
+        },
+        {
+          "name": "load_icd_mapping",
+          "description": "Load ICD-10 mappings from SNOMED CT refset files",
+          "parameters": [],
+          "returns": {
+            "type": "dict",
+            "description": "Mapping of SNOMED CUIs to {icd_code, description, confidence, source}"
+          }
+        },
+        {
+          "name": "load_loinc_mapping",
+          "description": "Load LOINC mappings from SNOMED CT refset files",
+          "parameters": [],
+          "returns": {
+            "type": "dict",
+            "description": "Mapping of SNOMED CUIs to {loinc_code, description, confidence, source}"
+          }
+        },
+        {
+          "name": "map_to_icd10",
+          "description": "Map a single SNOMED CT concept to ICD-10 codes",
+          "parameters": [
+            {"name": "snomed_cui", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "list[dict]",
+            "description": "List of {icd_code, description, confidence, source} mappings"
+          }
+        },
+        {
+          "name": "map_to_loinc",
+          "description": "Map a single SNOMED CT concept to LOINC codes",
+          "parameters": [
+            {"name": "snomed_cui", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "list[dict]",
+            "description": "List of {loinc_code, description, confidence, source} mappings"
+          }
+        },
+        {
+          "name": "map_concept",
+          "description": "Map a SNOMED CT concept to all available terminologies",
+          "parameters": [
+            {"name": "snomed_cui", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "dict",
+            "description": "Mapping results for ICD-10, LOINC, and RxNorm"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UMLSCIMapper",
+      "methods": [
+        {
+          "name": "__init__",
+          "description": "Initialize mapper with SNOMED data paths",
+          "parameters": [
+            {"name": "uk_path", "type": "str", "required": false, "default": null},
+            {"name": "international_path", "type": "str", "required": false, "default": null},
+            {"name": "simple_map_file", "type": "str", "required": false, "default": null}
+          ]
+        },
+        {
+          "name": "_auto_detect_paths",
+          "description": "Auto-detect RF2 mapping files",
+          "parameters": [],
+          "returns": {"type": "None"}
+        },
+        {
+          "name": "load_snomed_to_umls",
+          "description": "Load SNOMED CT to UMLS CUI mappings",
+          "parameters": [],
+          "returns": {
+            "type": "dict",
+            "description": "Mapping of SNOMED CUIs to {umls_cui, confidence, source}"
+          }
+        },
+        {
+          "name": "load_umls_to_snomed",
+          "description": "Load UMLS CUI to SNOMED CT mappings (reverse mapping)",
+          "parameters": [],
+          "returns": {
+            "type": "dict",
+            "description": "Mapping of UMLS CUIs to {snomed_cui, confidence, source}"
+          }
+        },
+        {
+          "name": "map_to_umls",
+          "description": "Map SNOMED CT concept to UMLS CUI",
+          "parameters": [
+            {"name": "snomed_cui", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "list[dict]",
+            "description": "List of {umls_cui, confidence, source} mappings"
+          }
+        },
+        {
+          "name": "map_from_umls",
+          "description": "Map UMLS CUI to SNOMED CT concept",
+          "parameters": [
+            {"name": "umls_cui", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "list[dict]",
+            "description": "List of {snomed_cui, confidence, source} mappings"
+          }
+        },
+        {
+          "name": "_is_umls_cui",
+          "description": "Validate UMLS CUI format (C + 7 digits)",
+          "parameters": [
+            {"name": "code", "type": "str", "required": true}
+          ],
+          "returns": {
+            "type": "bool",
+            "description": "True if valid UMLS CUI format"
+          }
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "map_concept",
+      "description": "Convenience function to map a SNOMED CT concept using ConceptMapper",
+      "parameters": [
+        {"name": "snomed_cui", "type": "str", "required": true},
+        {"name": "uk_path", "type": "str", "required": false, "default": null}
+      ],
+      "returns": {
+        "type": "dict",
+        "description": "Mapping results for ICD-10, LOINC, RxNorm"
+      }
+    },
+    {
+      "name": "batch_map_concepts",
+      "description": "Map multiple SNOMED CT concepts at once",
+      "parameters": [
+        {"name": "snomed_cuis", "type": "list[str]", "required": true},
+        {"name": "uk_path", "type": "str", "required": false, "default": null}
+      ],
+      "returns": {
+        "type": "dict",
+        "description": "Dict mapping each SNOMED CUI to its terminology mappings"
+      }
+    },
+    {
+      "name": "map_to_umls",
+      "description": "Map SNOMED CT concept to UMLS CUI using UMLSCIMapper",
+      "parameters": [
+        {"name": "snomed_cui", "type": "str", "required": true},
+        {"name": "uk_path", "type": "str", "required": false, "default": null}
+      ],
+      "returns": {
+        "type": "list[dict]",
+        "description": "List of {umls_cui, confidence, source} mappings"
+      }
+    },
+    {
+      "name": "map_from_umls",
+      "description": "Map UMLS CUI to SNOMED CT concept using UMLSCIMapper",
+      "parameters": [
+        {"name": "umls_cui", "type": "str", "required": true},
+        {"name": "international_path", "type": "str", "required": false, "default": null}
+      ],
+      "returns": {
+        "type": "list[dict]",
+        "description": "List of {snomed_cui, confidence, source} mappings"
+      }
+    },
+    {
+      "name": "batch_map_to_umls",
+      "description": "Map multiple SNOMED CT concepts to UMLS CUIs in batch",
+      "parameters": [
+        {"name": "snomed_cuis", "type": "list[str]", "required": true},
+        {"name": "uk_path", "type": "str", "required": false, "default": null}
+      ],
+      "returns": {
+        "type": "dict",
+        "description": "Dict mapping each SNOMED CUI to UMLS CUI mappings"
+      }
+    }
+  ],
+  "example_usage": [
+    "# Map SNOMED CT concept to ICD-10",
+    "from snomed_methods import ConceptMapper, map_concept",
+    "",
+    "mapper = ConceptMapper(uk_path='/path/to/snomed')",
+    "mappings = mapper.map_to_icd10('399187006')  # Meningioma",
+    "",
+    "# Map to multiple terminologies at once",
+    "results = map_concept('399187006', uk_path='/path/to/snomed')",
+    "print(results['icd10'])",
+    "print(results['loinc'])",
+    "",
+    "# Bidirectional UMLS CUI mapping",
+    "from snomed_methods import UMLSCIMapper, map_to_umls, map_from_umls",
+    "",
+    "umls_mapper = UMLSCIMapper(international_path='/path/to/international')",
+    "umls_cui = umls_mapper.map_to_umls('399187006')",
+    "snomed_cui = umls_mapper.map_from_umls('C0023956')",
+    "",
+    "# Batch mapping multiple concepts",
+    "from snomed_methods import batch_map_concepts, batch_map_to_umls",
+    "",
+    "cuis = ['399187006', '154621002', '416198003']",
+    "batch_results = batch_map_concepts(cuis, uk_path='/path/to/snomed')",
+    "umls_batch = batch_map_to_umls(cuis, uk_path='/path/to/snomed')"
+  ]
+}
