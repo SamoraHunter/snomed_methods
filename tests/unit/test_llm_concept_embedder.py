@@ -17,6 +17,10 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        import snomed_methods.llm_concept_embedder as embedder_mod
+
+        embedder_mod._SentenceTransformer = None
+
         self.test_concepts = pd.DataFrame(
             [
                 {
@@ -33,6 +37,12 @@ class TestClinicalConceptEmbedder(unittest.TestCase):
                 },
             ]
         )
+
+    def tearDown(self):
+        """Clean up after tests."""
+        import snomed_methods.llm_concept_embedder as embedder_mod
+
+        embedder_mod._SentenceTransformer = None
 
     def test_prepare_concept_text_basic(self):
         """Test basic concept text preparation."""
