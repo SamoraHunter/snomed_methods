@@ -150,7 +150,7 @@ def evaluate_hierarchy_expansion(
             except Exception:
                 continue
 
-        exact_match = 1.0 if set(predicted_cuis[:20]) == expected_related else 0.0
+        exact_match = 1.0 if set(predicted_cuis) == expected_related else 0.0
         all_exact_matches.append(exact_match)
 
         for k in k_values:

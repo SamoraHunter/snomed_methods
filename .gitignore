@@ -166,6 +166,15 @@ benchmark_outputs/*
 benchmark_output.ipynb
 benchmarks.yaml
 
+# Benchmarking plots (in both locations)
+benchmark_*.png
+notebooks/benchmark_*.png
+notebooks/benchmarks/*.png
+
+# Benchmarking outputs and results
+notebooks/benchmark_outputs/*
+notebooks/benchmarks/benchmark_outputs/*
+
 # UMLS/ICD mapping cache files (large intermediate data)
 simple_map_files/
 umls_cache/
@@ -187,6 +196,9 @@ notebooks/outputs/*
 test_outputs/
 test_results.csv
 
+# Custom format notebooks (not standard Jupyter format)
+notebooks/benchmarks/*.ipynb
+
 # Environment and secrets (templates)
 .env.example
 .secrets.example
@@ -196,3 +208,5 @@ notebooks/benchmark_outputs/benchmark_comparison.png
 notebooks/benchmark_outputs/summary_statistics.csv
 .devcontainer/devcontainer.json
 .devcontainer/devcontainer-lock.json
+notebooks/benchmarks/benchmark_outputs/full_suite/all_results.json
+notebooks/benchmarks/benchmark_outputs/summary_statistics.csv

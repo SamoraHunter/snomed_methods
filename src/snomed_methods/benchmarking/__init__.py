@@ -14,6 +14,15 @@ from .hierarchy import (
     generate_hierarchy_dataset,
     load_hierarchy_datasets,
 )
+from .mock_methods import (
+    get_mock_methods,
+    mock_annotator,
+    mock_hierarchy_expansion,
+    mock_mapper,
+    mock_similarity,
+    mock_term_lookup,
+)
+from .plots import plot_comparison, plot_metric_distribution
 from .results import (
     aggregate_results,
     best_performance,
@@ -22,9 +31,7 @@ from .results import (
     filter_metrics,
     get_all_metrics,
     load_results,
-    plot_comparison,
     plot_correlation_matrix,
-    plot_metric_distribution,
     rank_benchmarks,
     save_results,
     summarize_benchmark,
@@ -36,7 +43,6 @@ from .term import (
     load_term_datasets,
 )
 from .umnsrs import (
-    average_precision,
     benchmark_results_to_dataframe,
     download_umnsrs,
     evaluate_model,
@@ -45,18 +51,6 @@ from .umnsrs import (
     pearson_correlation,
     root_mean_squared_error,
     spearman_correlation,
-)
-from .umnsrs import (
-    f1_at_k as umnsrs_f1_at_k,
-)
-from .umnsrs import (
-    mean_reciprocal_rank as umnsrs_mean_reciprocal_rank,
-)
-from .umnsrs import (
-    precision_at_k as umnsrs_precision_at_k,
-)
-from .umnsrs import (
-    recall_at_k as umnsrs_recall_at_k,
 )
 from .vocabulary import (
     evaluate_mapper,
@@ -70,6 +64,7 @@ __all__ = [
     "term",
     "vocabulary",
     "umnsrs",
+    "mock_methods",
     "generate_annotation_dataset",
     "load_annotation_datasets",
     "evaluate_annotator",
@@ -108,6 +103,12 @@ __all__ = [
     "get_all_metrics",
     "filter_metrics",
     "plot_correlation_matrix",
+    "mock_annotator",
+    "mock_term_lookup",
+    "mock_mapper",
+    "mock_hierarchy_expansion",
+    "mock_similarity",
+    "get_mock_methods",
 ]
 
 __version__ = "1.0.0"

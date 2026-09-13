@@ -99,6 +99,7 @@ lint.select = [
 "tests/notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
 "notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
 "snomed_methods_examples.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
+"notebooks/benchmarks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
 "test_*.py" = ["T201", "E501", "C901", "B007"]
 "validate_notebooks.py" = ["C901", "T201"]
 "tests/notebook_runner.py" = ["T201", "E501"]
