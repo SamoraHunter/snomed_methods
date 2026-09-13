@@ -6,6 +6,8 @@ import pandas as pd
 
 try:
     from .plots import plot_comparison
+
+    plt = None
 except ImportError:
     try:
         import matplotlib.pyplot as plt

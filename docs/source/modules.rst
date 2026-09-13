@@ -8,3 +8,4 @@ snomed-methods modules
    snomed_term_lookup
    llm_concept_embedder
    semantic_expansion
+   benchmarking

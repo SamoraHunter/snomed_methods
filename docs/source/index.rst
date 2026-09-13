@@ -10,6 +10,7 @@ SNOMED CT Clinical Terminology Methods for Healthcare NLP
    module_architecture
    workflows
    capabilities_index
+   benchmarking
 
 Features
 --------

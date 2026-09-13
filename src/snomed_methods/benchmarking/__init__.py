@@ -58,12 +58,29 @@ from .vocabulary import (
     load_mapping_datasets,
 )
 
+try:
+    from .embeddings import (
+        accuracy_at_threshold,
+        auc_pr,
+        correlation_similarity,
+        evaluate_embedding_similarity,
+        generate_embedding_dataset,
+        load_embedding_datasets,
+        mean_squared_error_similarity,
+        precision_recall_f1,
+    )
+
+    HAS_EMBEDDINGS = True
+except ImportError:
+    HAS_EMBEDDINGS = False
+
 __all__ = [
     "annotation",
     "hierarchy",
     "term",
     "vocabulary",
     "umnsrs",
+    "embeddings",
     "mock_methods",
     "generate_annotation_dataset",
     "load_annotation_datasets",
@@ -88,6 +105,14 @@ __all__ = [
     "pearson_correlation",
     "mean_absolute_error",
     "root_mean_squared_error",
+    "accuracy_at_threshold",
+    "auc_pr",
+    "correlation_similarity",
+    "evaluate_embedding_similarity",
+    "generate_embedding_dataset",
+    "load_embedding_datasets",
+    "mean_squared_error_similarity",
+    "precision_recall_f1",
     "results",
     "evaluate_suite",
     "aggregate_results",
