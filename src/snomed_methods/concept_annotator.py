@@ -153,14 +153,17 @@ class ClinicalConceptAnnotator:
     def _get_hybrid_search(self):
         """Get or create HybridSearch instance."""
         if self._hybrid_search is None:
-            from src.snomed_methods import HybridSearch
+            try:
+                from snomed_methods import HybridSearch
 
-            self._hybrid_search = HybridSearch(
-                uk_path=self.uk_path,
-                model_path=self.model_path,
-                backend=self.backend,
-                device=self.device,
-            )
+                self._hybrid_search = HybridSearch(
+                    uk_path=self.uk_path,
+                    model_path=self.model_path,
+                    backend=self.backend,
+                    device=self.device,
+                )
+            except ImportError:
+                pass
         return self._hybrid_search
 
     def _preprocess_text(self, text: str) -> List[str]:
@@ -248,12 +251,15 @@ class ClinicalConceptAnnotator:
 
         # Use hybrid search to find related concepts
         _hybrid_search = None
+        hybrid_search_available = None
         try:
-            from src.snomed_methods import HybridSearch
+            from snomed_methods import HybridSearch
+
+            hybrid_search_available = HybridSearch
         except ImportError:
             pass
 
-        if HybridSearch is None and self._hybrid_search is None:
+        if hybrid_search_available is None and self._hybrid_search is None:
             return result
 
         hybrid = self._get_hybrid_search()
