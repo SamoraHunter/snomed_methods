@@ -4,7 +4,7 @@ This module provides simple placeholder functions that can be used to test
 benchmark infrastructure without requiring real classifier/lookup implementations.
 """
 
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 def mock_annotator(text: str) -> List[str]:
@@ -75,34 +75,97 @@ def mock_term_lookup(term: str) -> List[Tuple[str, str]]:
     return [(cui, f"Matched_{i}") for i, cui in enumerate(matched_cuis[:15])]
 
 
-def mock_mapper(snomed_cui: str) -> List[str]:
-    """Mock mapper returning synthetic ICD-10 and LOINC codes.
+def simple_mapper(snomed_cui: str, mappings: Dict[str, List[str]]) -> List[str]:
+    """Mapper using direct lookup via concept mapping.
 
     Args:
         snomed_cui: SNOMED concept ID to map
+        mappings: Dict of actual SNOMED to target code mappings
 
     Returns:
         List of mapped code strings (ICD and LOINC)
     """
-    cui_to_codes = {
-        "237550006": ["E11.9", "250.00", "LOINC_4544-3"],
-        "237600004": ["E11.9", "250.01", "LOINC_17856-6"],
-        "38341003": ["I10", "401.9", "LOINC_8867-4"],
-        "59621000": ["I10", "401.1", "LOINC_8867-4"],
-        "35489007": ["F33.9", "296.30", "LOINC_4544-3"],
-        "228450005": ["F33.2", "296.33", "LOINC_24725-5"],
-    }
+    return mappings.get(snomed_cui, [])
 
-    if snomed_cui in cui_to_codes:
-        return cui_to_codes[snomed_cui]
 
-    seed_hash = hash(snomed_cui)
-    icd_codes = [
-        f"ICD_E{abs(seed_hash + 1) % 99:02d}.{abs(seed_hash + 2) % 9}" for _ in range(3)
-    ]
-    loinc_codes = [f"LOINC_{718 + abs(seed_hash) % 100}" for _ in range(2)]
+def approximate_mapper(
+    snomed_cui: str,
+    mappings: Dict[str, List[str]],
+    all_cuis: Optional[List[str]] = None,
+) -> List[str]:
+    """Mapper using approximate/string-based matching for SNOMED concepts.
 
-    return icd_codes + loinc_codes[:5]
+    This method uses string similarity and partial matching to find mappings
+    when exact lookup fails. It's designed to be DIFFERENT from ground truth
+    extraction (which is direct lookup).
+
+    Args:
+        snomed_cui: SNOMED concept ID to map
+        mappings: Dict of actual SNOMED to target code mappings
+        all_cuis: Optional list of all available concept IDs
+
+    Returns:
+        List of mapped code strings
+    """
+    if snomed_cui in mappings:
+        return mappings[snomed_cui]
+
+    if not all_cuis or len(all_cuis) == 0:
+        return []
+
+    target_codes = []
+
+    for cui in all_cuis[:100]:
+        if len(target_codes) >= 5:
+            break
+        if cui == snomed_cui:
+            continue
+
+        common_digits = sum(1 for c1, c2 in zip(str(snomed_cui), str(cui)) if c1 == c2)
+        prefix_match = str(snomed_cui).startswith(str(cui)[:3]) or str(cui).startswith(
+            str(snomed_cui)[:3]
+        )
+
+        if common_digits >= 5 or prefix_match:
+            cui_mappings = mappings.get(cui, [])
+            target_codes.extend(cui_mappings)
+
+    return list(dict.fromkeys(target_codes))[:5]
+
+
+def random_mapper(
+    snomed_cui: str,
+    mappings: Dict[str, List[str]],
+    all_targets: Optional[List[str]] = None,
+) -> List[str]:
+    """Mapper using random sampling of available target codes.
+
+    This method randomly samples from all available mapping targets.
+    It's a baseline that should perform poorly on benchmarks.
+
+    Args:
+        snomed_cui: SNOMED concept ID to map
+        mappings: Dict of actual SNOMED to target code mappings
+        all_targets: Optional list of all possible target codes
+
+    Returns:
+        List of randomly sampled mapped code strings
+    """
+    import random
+
+    if all_targets is None:
+        all_targets = []
+        for targets in mappings.values():
+            all_targets.extend(targets)
+        all_targets = list(set(all_targets))
+
+    if not all_targets:
+        return []
+
+    random.seed(hash(snomed_cui) % (2**32))
+    num_return = min(5, len(all_targets))
+
+    return random.sample(all_targets, num_return)
 
 
 def mock_hierarchy_expansion(seed_cui: str) -> List[str]:
@@ -153,16 +216,58 @@ def mock_similarity(text1: str, text2: str) -> float:
     return float(abs(combined) % 1000)
 
 
-def get_mock_methods() -> dict:
+def get_mock_methods(
+    mappings: Optional[Dict[str, List[str]]] = None,
+    all_cuis: Optional[List[str]] = None,
+) -> dict:
     """Get all mock methods as a dict for easy access.
+
+    Args:
+        mappings: Optional pre-loaded SNOMED to target code mappings
+        all_cuis: Optional list of all available concept IDs
 
     Returns:
         Dict mapping method names to their functions
     """
+    if mappings is None:
+        mappings = {}
+
     return {
         "annotator": mock_annotator,
         "term_lookup": mock_term_lookup,
-        "mapper": mock_mapper,
+        "mapper_simple": lambda cui: simple_mapper(cui, mappings),
+        "mapper_approximate": lambda cui: approximate_mapper(cui, mappings, all_cuis),
+        "mapper_random": lambda cui: random_mapper(cui, mappings),
         "hierarchy_expansion": mock_hierarchy_expansion,
         "similarity": mock_similarity,
     }
+
+
+def mock_mapper(snomed_cui: str) -> List[str]:
+    """Mock mapper returning synthetic ICD-10 and LOINC codes.
+
+    Args:
+        snomed_cui: SNOMED concept ID to map
+
+    Returns:
+        List of mapped code strings (ICD and LOINC)
+    """
+    cui_to_codes = {
+        "237550006": ["E11.9", "250.00", "LOINC_4544-3"],
+        "237600004": ["E11.9", "250.01", "LOINC_17856-6"],
+        "38341003": ["I10", "401.9", "LOINC_8867-4"],
+        "59621000": ["I10", "401.1", "LOINC_8867-4"],
+        "35489007": ["F33.9", "296.30", "LOINC_4544-3"],
+        "228450005": ["F33.2", "296.33", "LOINC_24725-5"],
+    }
+
+    if snomed_cui in cui_to_codes:
+        return cui_to_codes[snomed_cui]
+
+    seed_hash = hash(snomed_cui)
+    icd_codes = [
+        f"ICD_E{abs(seed_hash + 1) % 99:02d}.{abs(seed_hash + 2) % 9}" for _ in range(3)
+    ]
+    loinc_codes = [f"LOINC_{718 + abs(seed_hash) % 100}" for _ in range(2)]
+
+    return icd_codes + loinc_codes[:5]
