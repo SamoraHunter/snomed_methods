@@ -129,7 +129,6 @@ results_*.csv
 *_results.csv
 result_*
 benchmark_outputs/*
-benchmark_output.ipynb
 benchmarks.yaml
 results.json
 notebooks/results.json
@@ -163,7 +162,6 @@ results_*.csv
 *_results.csv
 result_*
 benchmark_outputs/*
-benchmark_output.ipynb
 benchmarks.yaml
 
 # Benchmarking plots (in both locations)
@@ -195,9 +193,6 @@ notebooks/outputs/*
 # Test output files
 test_outputs/
 test_results.csv
-
-# Custom format notebooks (not standard Jupyter format)
-notebooks/benchmarks/*.ipynb
 
 # Environment and secrets (templates)
 .env.example
