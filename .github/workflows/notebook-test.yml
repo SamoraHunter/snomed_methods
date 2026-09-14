@@ -9,14 +9,62 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    outputs:
+      is_self_hosted: ${{ steps.detect_env.outputs.is_self_hosted }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Detect Runner Environment
+        id: detect_env
+        run: |
+          IS_SELF_HOSTED=false
+          IS_ACT=false
+          IS_GITEA=false
+          if [ -n "$ACT" ]; then
+            echo "Runner environment: local act"
+            IS_ACT=true
+            IS_SELF_HOSTED=true
+          elif [ "${{ github.server_url }}" != "https://github.com" ]; then
+            echo "Runner environment: Gitea"
+            IS_GITEA=true
+            IS_SELF_HOSTED=true
+          else
+            echo "Runner environment: GitHub.com"
+          fi
+          echo "is_act=$IS_ACT" >> $GITHUB_OUTPUT
+          echo "is_gitea=$IS_GITEA" >> $GITHUB_OUTPUT
+          echo "is_self_hosted=$IS_SELF_HOSTED" >> $GITHUB_OUTPUT
+
+      - name: Perform Local Runner Setup
+        id: local_setup
+        if: steps.detect_env.outputs.is_self_hosted == 'true'
+        uses: ./.github/actions/local-setup
+        with:
+          gitea-token: ${{ secrets.GITEA_TOKEN }}
+          python-mirror-url: ${{ vars.PYTHON_MIRROR_URL || env.PYTHON_MIRROR_URL }}
+          internal-proxy-host: ${{ vars.INTERNAL_PROXY_HOST || env.INTERNAL_PROXY_HOST }}
+          internal-domain: ${{ vars.INTERNAL_DOMAIN || env.INTERNAL_DOMAIN }}
+          internal-cert-name: ${{ vars.INTERNAL_CERT_NAME || env.INTERNAL_CERT_NAME }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
+        env:
+          http_proxy: ${{ env.http_proxy }}
+          https_proxy: ${{ env.https_proxy }}
+          AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
         with:
           python-version: '3.10'
+
+      - name: Fix pip installation for local/Gitea/act runners
+        if: steps.detect_env.outputs.is_gitea == 'true' || steps.detect_env.outputs.is_act == 'true'
+        run: |
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python3 - --ignore-installed
+          python3 -m pip install --upgrade --break-system-packages pip setuptools wheel || true
 
       - name: Install dependencies
         run: |
