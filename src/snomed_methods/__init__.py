@@ -20,6 +20,11 @@ from snomed_methods.llm_concept_embedder import (
     ConceptVectorSearch,
     load_concepts_from_medcat,
 )
+from snomed_methods.progressive_expansion import (
+    ExpansionResult,
+    ProgressiveExpansionPipeline,
+    expand_progressive,
+)
 from snomed_methods.semantic_expansion import (
     SearchResults,
     SemanticSearch,
@@ -61,6 +66,9 @@ __all__ = [
     "ClinicalConceptEmbedder",
     "ConceptVectorSearch",
     "load_concepts_from_medcat",
+    "ExpansionResult",
+    "ProgressiveExpansionPipeline",
+    "expand_progressive",
     "SemanticSearch",
     "SearchResults",
     "expand_concepts",
