@@ -131,9 +131,17 @@ pre-commit install
 ```
 
 This runs on every commit:
-- ruff check
+- ruff check (linting)
 - black formatting check
-- mypy type checking
+- end-of-file fixer, trailing whitespace removal
+
+### Type Checking (mypy)
+
+Type hints are required for new code. Run type checking locally or in CI:
+
+```bash
+mypy .
+```
 
 ## Git Workflow
 

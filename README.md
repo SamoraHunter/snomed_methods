@@ -154,6 +154,9 @@ pytest tests/
 
 # Run specific test module
 pytest tests/unit/test_snomed_term_lookup.py
+
+# Run with coverage
+pytest tests/ --cov=src --cov-report=xml
 ```
 
 ### Code Quality
@@ -164,6 +167,9 @@ black .
 
 # Lint with Ruff
 ruff check .
+
+# Type checking with mypy
+mypy .
 ```
 
 ## License

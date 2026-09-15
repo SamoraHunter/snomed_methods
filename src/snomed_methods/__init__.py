@@ -10,6 +10,7 @@ from snomed_methods.concept_mapper import (
     batch_map_concepts,
     map_concept,
 )
+from snomed_methods.config import SnomedConfig, get_config
 from snomed_methods.hybrid_search import (
     HybridSearch,
     SearchResult,
@@ -80,6 +81,8 @@ __all__ = [
     "ConceptMapper",
     "map_concept",
     "batch_map_concepts",
+    "SnomedConfig",
+    "get_config",
 ]
 
 # Add UMLSCIMapper components if available
