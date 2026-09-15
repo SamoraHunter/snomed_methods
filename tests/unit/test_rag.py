@@ -16,7 +16,7 @@ def run_tests():
     results = {"passed": [], "failed": []}
 
     project_root = os.path.dirname(os.path.abspath(__file__))
-    uk_path = os.path.join(
+    os.path.join(
         project_root,
         "uk_sct2cl_42.2.0",
         "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
@@ -142,10 +142,6 @@ def run_tests():
     print("-" * 40)
 
     try:
-        retrieved = [
-            ("C0023956", "Meningioma", 0.85),
-            ("C0013421", "Diabetes Mellitus", 0.62),
-        ]
 
         print("[INFO] Skipping actual LLM call (would require Ollama)")
 
@@ -255,7 +251,7 @@ def run_tests():
             retriever.save_index(index_path)
             print("[PASS] RAG index saved")
 
-            new_retriever = RAGRetriever(
+            RAGRetriever(
                 embedder=mock_embedder,
                 index_path=index_path,
             )
