@@ -45,11 +45,15 @@ def test_stage_weights():
 
 
 def test_pipeline_with_minimal_data():
-    from snomed_methods import ProgressiveExpansionPipeline
+    from snomed_methods.progressive_expansion import (
+        ProgressiveExpansionPipeline,
+    )
 
     try:
         p = ProgressiveExpansionPipeline(backend="transformers")
-        result = p.expand("test", stages=["term"], max_concepts=10)
+        result = p.expand("test", stages=["term"], max_concepts=5)
         assert hasattr(result, "total_concepts")
     except ImportError:
         pytest.skip("Required packages not available")
+    except FileNotFoundError:
+        pytest.skip("SNOMED UK Clinical RF2 data not available in test environment")
