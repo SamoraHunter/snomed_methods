@@ -156,22 +156,14 @@ model_packs/*
 .INSTRUCTIONS.md
 uk_sct2cl_42.2.0/*
 
-# Benchmarking results and outputs
-results.csv
-results_*.csv
-*_results.csv
-result_*
-benchmark_outputs/*
-benchmarks.yaml
+# Benchmarking outputs (in both locations)
+notebooks/benchmark_outputs/*
+notebooks/benchmarks/benchmark_outputs/*
 
-# Benchmarking plots (in both locations)
+#Benchmark plots (in both locations)
 benchmark_*.png
 notebooks/benchmark_*.png
 notebooks/benchmarks/*.png
-
-# Benchmarking outputs and results
-notebooks/benchmark_outputs/*
-notebooks/benchmarks/benchmark_outputs/*
 
 # UMLS/ICD mapping cache files (large intermediate data)
 simple_map_files/
@@ -194,18 +186,24 @@ notebooks/outputs/*
 test_outputs/
 test_results.csv
 
-# Environment and secrets (templates)
-.env.example
-.secrets.example
-*.env
-*.secrets
-notebooks/benchmark_outputs/benchmark_comparison.png
-notebooks/benchmark_outputs/summary_statistics.csv
+# Benchmark metrics and results
+benchmark_outputs/*
+benchmarks.yaml
+results.csv
+results_*.csv
+*_results.csv
+result_*
+results.json
+notebooks/results.json
+notebooks/benchmarks/results.json
+
+# Devcontainer configs
 .devcontainer/devcontainer.json
 .devcontainer/devcontainer-lock.json
-notebooks/benchmarks/benchmark_outputs/full_suite/all_results.json
-notebooks/benchmarks/benchmark_outputs/summary_statistics.csv
+
+# Embedding models
 embedding_models/
 embedding_models/SapBERT-from-PubMedBERT-fulltext
-embedding_models/SapBERT-from-PubMedBERT-fulltext
+
+# Environment suffix patterns
 snomed_methods_env*
