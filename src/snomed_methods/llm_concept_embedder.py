@@ -6,6 +6,7 @@ Generates high-dimensional vector embeddings for SNOMED CT / MedCAT Concept
 Databases using open-source LLMs or clinical transformers.
 """
 
+import logging
 import os
 import pickle
 from typing import Dict, List, Optional, Tuple, Union
@@ -15,6 +16,9 @@ import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
+
+# Module-level logger for main() function
+logger = logging.getLogger(__name__)
 
 
 class ClinicalConceptEmbedder:
@@ -49,6 +53,8 @@ class ClinicalConceptEmbedder:
         self.batch_size: int = batch_size
         self.ollama_base_url: str = ollama_base_url
         self.transformers_model_type: Optional[str] = transformers_model_type
+
+        self._logger = logging.getLogger(__name__)
 
         if backend == "hf":
             self._init_hf_model()
@@ -183,12 +189,13 @@ class ClinicalConceptEmbedder:
                     saved_data = pickle.load(f)
                 all_embeddings.extend(saved_data.get("embeddings", []))
                 processed_count = len(all_embeddings)
-                print(
-                    f"Resuming from checkpoint: {processed_count} / "
-                    f"{len(concept_texts)} concepts",
+                logger.info(
+                    "Resuming from checkpoint: %d / %d concepts",
+                    processed_count,
+                    len(concept_texts),
                 )
             except Exception:
-                print("Failed to load checkpoint, starting fresh")
+                logger.warning("Failed to load checkpoint, starting fresh")
 
         for i in tqdm(
             range(start_idx, len(concept_texts), effective_batch_size),
@@ -232,7 +239,9 @@ class ClinicalConceptEmbedder:
                         embedding = np.array(response["embedding"])
                         batch_embeddings_list.append(embedding)
                     except Exception as e:
-                        print(f"Error embedding text (index {i}): {e}. Skipping.")
+                        logger.error(
+                            "Error embedding text (index %d): %s. Skipping.", i, e
+                        )
 
             all_embeddings.extend(batch_embeddings_list)
 
@@ -245,7 +254,7 @@ class ClinicalConceptEmbedder:
                 temp_data = {"embeddings": list(all_embeddings)}
                 with open(checkpoint_path, "wb") as f:
                     pickle.dump(temp_data, f)
-                print(f"Checkpoint saved at {new_processed_count} concepts")
+                logger.info("Checkpoint saved at %d concepts", new_processed_count)
             processed_count = new_processed_count
 
         if all_embeddings:
@@ -619,9 +628,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print("Starting clinical concept embedding pipeline...")
-    print(f"Backend: {args.backend}")
-    print(f"Model: {args.model}")
+    logger.info("Starting clinical concept embedding pipeline...")
+    logger.info("Backend: %s", args.backend)
+    logger.info("Model: %s", args.model)
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -643,7 +652,7 @@ if __name__ == "__main__":
     if args.medcat_path:
         from medcat.cat import CAT
 
-        print(f"Loading MedCAT model pack: {args.medcat_path}")
+        logger.info("Loading MedCAT model pack: %s", args.medcat_path)
         cat = CAT.load_model_pack(args.medcat_path)
         concept_df = load_concepts_from_medcat(cat)
     else:
@@ -656,7 +665,7 @@ if __name__ == "__main__":
         )
         snomed_dir = os.environ.get("SNOMED_DIR", default_snomed_dir)
 
-        print(f"Loading SNOMED concepts from: {snomed_dir}")
+        logger.info("Loading SNOMED concepts from: %s", snomed_dir)
         lookup = create_term_lookup_from_directory(snomed_dir)
         results = lookup.find_concepts_by_term(
             args.concept_term, match_prefix=True, top_n=100
@@ -664,7 +673,7 @@ if __name__ == "__main__":
 
         concept_df = pd.DataFrame([{"cui": c, "preferred_name": t} for c, t in results])
 
-    print(f"Prepared {len(concept_df)} concepts")
+    logger.info("Prepared %d concepts", len(concept_df))
 
     concept_texts = embedder.prepare_concept_text(concept_df)
 
@@ -676,7 +685,7 @@ if __name__ == "__main__":
 
     output_path = os.path.join(args.output_dir, "concept_embeddings.pkl")
     embedder.export_embeddings(cui_to_embedding, output_path)
-    print(f"Saved embeddings to: {output_path}")
+    logger.info("Saved embeddings to: %s", output_path)
 
     search_engine = ConceptVectorSearch(
         cui_to_embedding,
@@ -688,11 +697,11 @@ if __name__ == "__main__":
     )
     search_engine.build_index(index_type="FlatIP")
 
-    print(f"\nQuerying for similar concepts to '{args.concept_term}'...")
+    logger.info("\nQuerying for similar concepts to '%s'...", args.concept_term)
 
     query_results = search_engine.search(args.concept_term, top_k=20)
 
-    print("\nTop 20 similar concepts:")
+    logger.info("\nTop 20 similar concepts:")
     for i, (cui, name, score) in enumerate(query_results[:20], 1):
-        print(f"{i:2d}. CUI: {cui:15s} | Score: {score:.4f}")
-        print(f"     Name: {name}")
+        logger.info("%2d. CUI: %15s | Score: %.4f", i, cui, score)
+        logger.info("     Name: %s", name)

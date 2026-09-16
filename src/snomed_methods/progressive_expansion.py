@@ -96,9 +96,7 @@ class TermMatchingStage(StageExecutor):
             pass
 
     def _get_fallback_uk_path(self) -> str:
-        # Try absolute path first, then relative to script directory
         uk_paths = [
-            "/workspaces/snomed_methods/uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
             os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 "uk_sct2cl_42.2.0",
@@ -177,9 +175,7 @@ class HierarchyExpansionStage(StageExecutor):
             pass
 
     def _get_fallback_uk_path(self) -> str:
-        # Try absolute path first, then relative to script directory
         uk_paths = [
-            "/workspaces/snomed_methods/uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
             os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 "uk_sct2cl_42.2.0",
@@ -297,9 +293,7 @@ class EmbeddingSimilarityStage(StageExecutor):
         )
 
     def _get_fallback_uk_path(self) -> str:
-        # Try absolute path first, then relative to script directory
         uk_paths = [
-            "/workspaces/snomed_methods/uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
             os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 "uk_sct2cl_42.2.0",
@@ -651,17 +645,11 @@ class ExpandedExpansionResult:
     def _get_fallback_uk_path() -> str:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(script_dir)
-        uk_path = os.path.join(
+        return os.path.join(
             project_root,
             "uk_sct2cl_42.2.0",
             "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
         )
-        if not os.path.exists(uk_path):
-            uk_path = (
-                "/workspaces/snomed_methods/uk_sct2cl_42.2.0/"
-                "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z"
-            )
-        return uk_path
 
     def __repr__(self) -> str:
         return (

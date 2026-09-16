@@ -317,7 +317,6 @@ class ConceptMapper:
             from medcat.cat import CAT
 
             model_packs = [
-                "/workspaces/snomed_methods/model_packs/medcat_model_pack_422d1d38fc58f158.zip",
                 os.path.join(
                     os.path.dirname(os.path.dirname(__file__)),
                     "model_packs",
@@ -459,7 +458,7 @@ class ConceptMapper:
 
     def _get_term_lookup(self):  # Returns: SnomedTermLookup instance
         """Get or create a SnomedTermLookup instance."""
-        from src.snomed_methods import (
+        from snomed_methods import (
             SnomedTermLookup,
             create_term_lookup_from_directory,
         )
