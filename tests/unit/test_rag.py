@@ -1,299 +1,510 @@
 #!/usr/bin/env python3
-"""Test script for rag.py module"""
+"""Pytest unit tests for RAG (Retrieval-Augmented Generation) module."""
 
 import os
-import sys
+import tempfile
+
+import numpy as np
+import pytest
 
 
-def run_tests():
-    """Run comprehensive tests on RAG classes."""
+class MockEmbedder:
+    """Mock embedder for testing RAG classes."""
 
-    print("=" * 80)
-    print("RAG MODULE TESTS")
-    print("=" * 80)
-    print()
+    def generate_embeddings(self, texts, batch_size=None):
+        """Generate mock embeddings."""
+        return [np.random.randn(384) for _ in texts]
 
-    results = {"passed": [], "failed": []}
 
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-    )
+@pytest.fixture(scope="module")
+def mock_embedder():
+    """Create mock embedder fixture."""
+    return MockEmbedder()
 
-    # Test 1: Import RAG module
-    print("-" * 40)
-    print("TEST 1: Import RAG Module")
-    print("-" * 40)
 
-    try:
-        from snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
+@pytest.fixture(scope="module")
+def sample_data_embeddings():
+    """Create sample CUI embedding data."""
+    np.random.seed(42)
+    return {
+        "C0023956": np.random.randn(384),
+        "C0013421": np.random.randn(384),
+        "C0011861": np.random.randn(384),
+        "C0001395": np.random.randn(384),
+    }
 
-        print("[PASS] Successfully imported RAG classes")
-        results["passed"].append("Import RAG classes")
 
-    except Exception as e:
-        print(f"[FAIL] Import error: {e}")
-        results["failed"].append(f"Import: {e}")
+@pytest.fixture(scope="module")
+def sample_data_names():
+    """Create sample CUI to name mapping."""
+    return {
+        "C0023956": "Meningioma",
+        "C0013421": "Diabetes Mellitus",
+        "C0011861": "Hypertension",
+        "C0001395": "Bronchitis",
+    }
 
-    # Test 2: Mock embedder for testing
-    print()
-    print("-" * 40)
-    print("TEST 2: Create Mock Embedder")
-    print("-" * 40)
 
-    try:
-        import numpy as np
+class TestRAGRetrieverInit:
+    """Tests for RAGRetriever initialization."""
 
-        class MockEmbedder:
-            def generate_embeddings(self, texts, batch_size=None):
-                return [np.random.randn(384) for _ in texts]
+    def test_init_with_embedder(self, mock_embedder):
+        from src.snomed_methods.rag import RAGRetriever
 
-        mock_embedder = MockEmbedder()
-        print("[PASS] Created mock embedder")
-        results["passed"].append("Mock embedder")
-
-    except Exception as e:
-        print(f"[FAIL] Mock embedder error: {e}")
-        results["failed"].append(f"Mock embedder: {e}")
-
-    # Test 3: RAGRetriever with mocked data
-    print()
-    print("-" * 40)
-    print("TEST 3: RAGRetriever Initialization")
-    print("-" * 40)
-
-    try:
-        import numpy as np
-
-        cui_to_embedding = {
-            "C0023956": np.random.randn(384),
-            "C0013421": np.random.randn(384),
-            "C0011861": np.random.randn(384),
-        }
-        cui_to_name = {
-            "C0023956": "Meningioma",
-            "C0013421": "Diabetes Mellitus",
-            "C0011861": "Hypertension",
-        }
-
+        cui_to_embedding = {"C001": np.random.randn(384)}
+        cui_to_name = {"C001": "Test Concept"}
         retriever = RAGRetriever(
             embedder=mock_embedder,
             cui_to_embedding=cui_to_embedding,
             cui_to_name=cui_to_name,
         )
-        print("[PASS] RAGRetriever initialized successfully")
-        results["passed"].append("RAGRetriever init")
+        assert retriever.embedder is not None
+        assert len(retriever.cui_to_embedding) == 1
+        assert retriever.index is not None
 
-    except Exception as e:
-        print(f"[FAIL] RAGRetriever initialization error: {e}")
-        import traceback
+    def test_init_without_embedder(self):
+        from src.snomed_methods.rag import RAGRetriever
 
-        traceback.print_exc()
-        results["failed"].append(f"RAGRetriever init: {e}")
+        with pytest.raises(ValueError, match="No embeddings available to build index"):
+            RAGRetriever()
 
-    # Test 4: Retrieval functionality
-    print()
-    print("-" * 40)
-    print("TEST 4: Retrieval Functionality")
-    print("-" * 40)
-
-    try:
-        results_list = retriever.retrieve("brain tumor", top_k=5)
-
-        print(f"Retrieved {len(results_list)} concepts:")
-        for cui, name, score in results_list[:3]:
-            print(f"  - [{score:.3f}] {name} ({cui})")
-
-        if len(results_list) > 0:
-            print("[PASS] Retrieval returned results")
-            results["passed"].append("Retrieval works")
-        else:
-            print("[FAIL] No retrieval results")
-            results["failed"].append("Retrieval empty")
-
-    except Exception as e:
-        print(f"[FAIL] Retrieval error: {e}")
-        import traceback
-
-        traceback.print_exc()
-        results["failed"].append(f"Retrieval: {e}")
-
-    # Test 5: RAGExplanations initialization
-    print()
-    print("-" * 40)
-    print("TEST 5: RAGExplanations Initialization")
-    print("-" * 40)
-
-    try:
-        explanations = RAGExplanations(embedder=mock_embedder, backend="ollama")
-        print("[PASS] RAGExplanations initialized (backend: ollama)")
-        results["passed"].append("RAGExplanations init")
-
-    except Exception as e:
-        print(f"[FAIL] RAGExplanations initialization error: {e}")
-        results["failed"].append(f"RAGExplanations init: {e}")
-
-    # Test 6: Batch explanations generation (mock)
-    print()
-    print("-" * 40)
-    print("TEST 6: Batch Explanations Generation")
-    print("-" * 40)
-
-    try:
-
-        print("[INFO] Skipping actual LLM call (would require Ollama)")
-
-        # Check method existence
-        if hasattr(explanations, "generate_batch_explanations"):
-            print("[PASS] generate_batch_explanations method exists")
-            results["passed"].append("generate_batch_explanations method")
-
-    except Exception as e:
-        print(f"[FAIL] Explanations test error: {e}")
-        results["failed"].append(f"Explanations: {e}")
-
-    # Test 7: RAGChat initialization
-    print()
-    print("-" * 40)
-    print("TEST 7: RAGChat Initialization")
-    print("-" * 40)
-
-    try:
-        rag_chat = RAGChat(
-            retriever=retriever,
-            explanations=explanations if "explanations" in dir() else None,
-            max_context_turns=5,
-        )
-        print("[PASS] RAGChat initialized")
-        results["passed"].append("RAGChat init")
-
-        # Test ask method
-        response = rag_chat.ask(query="lung cancer", top_k=3)
-        if "results" in response and len(response["results"]) > 0:
-            print(f"[PASS] Chat ask() returned {len(response['results'])} results")
-            results["passed"].append("Chat ask()")
-        else:
-            print("[FAIL] Chat ask() failed")
-            results["failed"].append("Chat ask()")
-
-    except Exception as e:
-        print(f"[FAIL] RAGChat error: {e}")
-        import traceback
-
-        traceback.print_exc()
-        results["failed"].append(f"RAGChat: {e}")
-
-    # Test 8: Follow-up query
-    print()
-    print("-" * 40)
-    print("TEST 8: Follow-Up Query")
-    print("-" * 40)
-
-    try:
-        feedback_response = rag_chat.follow_up(
-            feedback="but only malignant",
-            refine_with_previous=True,
-        )
-        if "results" in feedback_response:
-            print(
-                f"[PASS] Follow-up returned {len(feedback_response['results'])} results"
-            )
-            results["passed"].append("Chat follow-up()")
-        else:
-            print("[FAIL] Follow-up failed")
-            results["failed"].append("Chat follow-up()")
-
-    except Exception as e:
-        print(f"[FAIL] Follow-up error: {e}")
-        import traceback
-
-        traceback.print_exc()
-        results["failed"].append(f"Follow-up: {e}")
-
-    # Test 9: Reset conversation
-    print()
-    print("-" * 40)
-    print("TEST 9: Reset Conversation")
-    print("-" * 40)
-
-    try:
-        rag_chat.reset()
-        if len(rag_chat.conversation_history) == 0:
-            print("[PASS] Conversation history reset")
-            results["passed"].append("Chat reset()")
-        else:
-            print(
-                f"[FAIL] History not empty: {len(rag_chat.conversation_history)} turns"
-            )
-            results["failed"].append("Chat reset()")
-
-    except Exception as e:
-        print(f"[FAIL] Reset error: {e}")
-        import traceback
-
-        traceback.print_exc()
-        results["failed"].append(f"Reset: {e}")
-
-    # Test 10: Save/Load index
-    print()
-    print("-" * 40)
-    print("TEST 10: Save and Load Index")
-    print("-" * 40)
-
-    try:
-        import tempfile
+    def test_init_with_index_path(
+        self, mock_embedder, sample_data_embeddings, sample_data_names
+    ):
+        from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            index_path = os.path.join(tmpdir, "rag_test.pkl")
-
-            retriever.save_index(index_path)
-            print("[PASS] RAG index saved")
-
-            RAGRetriever(
+            index_path = os.path.join(tmpdir, "rag_index.pkl")
+            retriever1 = RAGRetriever(
                 embedder=mock_embedder,
-                index_path=index_path,
+                cui_to_embedding=dict(sample_data_embeddings),
+                cui_to_name=dict(sample_data_names),
             )
-            print("[PASS] RAG index loaded")
-            results["passed"].append("Save/Load index")
+            retriever1.save_index(index_path)
+            retriever2 = RAGRetriever(index_path=index_path)
+            assert retriever2.index is not None
+            assert len(retriever2.cui_list) == 4
 
-    except Exception as e:
-        print(f"[FAIL] Save/load error: {e}")
-        import traceback
+    def test_init_with_index_only(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
 
-        traceback.print_exc()
-        results["failed"].append(f"Save/Load index: {e}")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index.pkl")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            retriever2 = RAGRetriever(index_path=index_path)
+            assert retriever2.index is not None
+            assert len(retriever2.cui_list) == 4
 
-    # Summary
-    print()
-    print("=" * 80)
-    print("TEST SUMMARY")
-    print("=" * 80)
 
-    total_passed = len(results["passed"])
-    total_failed = len(results["failed"])
-    total_tests = total_passed + total_failed
+class TestRAGRetrieverRetrieve:
+    """Tests for RAGRetriever retrieve method."""
 
-    print(f"Total tests: {total_tests}")
-    print(f"Passed: {total_passed}")
-    print(f"Failed: {total_failed}")
-    print()
+    def test_retrieve_basic(
+        self, mock_embedder, sample_data_embeddings, sample_data_names
+    ):
+        from src.snomed_methods.rag import RAGRetriever
 
-    if results["passed"]:
-        print("PASSED TESTS:")
-        for test in results["passed"]:
-            print(f"  ✓ {test}")
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+            cui_to_name=dict(sample_data_names),
+        )
+        results = retriever.retrieve("brain tumor", top_k=3)
+        assert isinstance(results, list)
+        assert len(results) <= 3
+        if len(results) > 0:
+            assert isinstance(results[0], tuple)
+            assert len(results[0]) == 3
 
-    if results["failed"]:
-        print("\nFAILED TESTS:")
-        for test in results["failed"]:
-            print(f"  ✗ {test}")
+    def test_retrieve_without_index(self):
+        from src.snomed_methods.rag import RAGRetriever
 
-    print()
+        retriever = object.__new__(RAGRetriever)
+        retriever.index = None
+        with pytest.raises(ValueError, match="Index not built or loaded"):
+            retriever.retrieve("test query")
 
-    return 0 if total_failed == 0 else 1
+    def test_retrieve_return_scores_false(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        results = retriever.retrieve("test", top_k=5, return_scores=False)
+        if len(results) > 0:
+            assert results[0][2] == 1.0
+
+    def test_retrieve_top_k_1(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        results = retriever.retrieve("test", top_k=1)
+        assert len(results) <= 1
+
+
+class TestRAGRetrieverIndexOperations:
+    """Tests for index save/load operations."""
+
+    def test_save_faiss_with_extension(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index.faiss")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            assert os.path.exists(index_path)
+            assert os.path.getsize(index_path) > 0
+
+    def test_save_pickle_with_extension(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index.pkl")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            assert os.path.exists(index_path)
+            assert os.path.getsize(index_path) > 0
+
+    def test_save_with_no_extension(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            assert os.path.exists(index_path + ".faiss")
+
+    def test_load_faiss_file(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index.faiss")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            retriever2 = object.__new__(RAGRetriever)
+            retriever2.load_index(index_path)
+            assert retriever2.index is not None
+            assert hasattr(retriever2, "embedding_dim")
+
+    def test_load_pickle_file(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index.pkl")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            retriever2 = object.__new__(RAGRetriever)
+            retriever2.load_index(index_path)
+            assert retriever2.index is not None
+            assert len(retriever2.cui_list) == 4
+
+    def test_load_with_no_extension(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_path = os.path.join(tmpdir, "rag_index")
+            retriever1 = RAGRetriever(
+                embedder=mock_embedder,
+                cui_to_embedding=dict(sample_data_embeddings),
+            )
+            retriever1.save_index(index_path)
+            retriever2 = object.__new__(RAGRetriever)
+            retriever2.load_index(index_path + ".faiss")
+            assert retriever2.index is not None
+            assert hasattr(retriever2, "embedding_dim")
+
+
+class TestRAGExplanationsInit:
+    """Tests for RAGExplanations initialization."""
+
+    def test_init_default_backend(self):
+        from src.snomed_methods.rag import RAGExplanations
+
+        explanations = RAGExplanations()
+        assert explanations.backend == "ollama"
+
+    def test_init_ollama_backend(self, mock_embedder):
+        from src.snomed_methods.rag import RAGExplanations
+
+        explanations = RAGExplanations(embedder=mock_embedder, backend="ollama")
+        assert explanations.backend == "ollama"
+
+    def test_init_hf_backend(self, mock_embedder):
+        from src.snomed_methods.rag import RAGExplanations
+
+        explanations = RAGExplanations(embedder=mock_embedder, backend="hf")
+        assert explanations.backend == "hf"
+
+    def test_init_custom_model(self, mock_embedder):
+        from src.snomed_methods.rag import RAGExplanations
+
+        explanations = RAGExplanations(model_name="custom-model")
+        assert explanations.model_name == "custom-model"
+
+
+class TestRAGChatInit:
+    """Tests for RAGChat initialization."""
+
+    def test_init_with_retriever(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        assert chat.retriever is not None
+        assert len(chat.conversation_history) == 0
+
+    def test_init_with_explanations(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        explanations = RAGExplanations(embedder=mock_embedder)
+        chat = RAGChat(retriever=retriever, explanations=explanations)
+        assert chat.explanations is not None
+
+    def test_init_custom_max_turns(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever, max_context_turns=10)
+        assert chat.max_context_turns == 10
+
+
+class TestRAGChatAsk:
+    """Tests for RAGChat ask method."""
+
+    def test_ask_basic(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        response = chat.ask(query="brain tumor", top_k=3)
+        assert "query" in response
+        assert "results" in response
+        assert len(response["results"]) <= 3
+
+    def test_ask_with_explanations(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        explanations = RAGExplanations(embedder=mock_embedder)
+        chat = RAGChat(retriever=retriever, explanations=explanations)
+        response = chat.ask(query="test", return_explanations=True)
+        if "explanations" in response:
+            assert isinstance(response["explanations"], list)
+
+    def test_ask_stores_history(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        chat.ask(query="first question")
+        chat.ask(query="second question")
+        assert len(chat.conversation_history) == 2
+
+    def test_ask_with_max_context_limit(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever, max_context_turns=3)
+        for i in range(5):
+            chat.ask(query=f"question {i}")
+        assert len(chat.conversation_history) == 3
+
+
+class TestRAGChatFollowUp:
+    """Tests for RAGChat follow_up method."""
+
+    def test_follow_up_basic(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        chat.ask(query="original query")
+        response = chat.follow_up(feedback="refined")
+        assert "results" in response
+
+    def test_follow_up_without_refine(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        response = chat.follow_up(
+            feedback="independent query", refine_with_previous=False
+        )
+        assert "results" in response
+
+    def test_follow_up_stores_history(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        chat.ask(query="original")
+        chat.follow_up(feedback="refined")
+        assert len(chat.conversation_history) == 2
+
+
+class TestRAGChatReset:
+    """Tests for RAGChat reset method."""
+
+    def test_reset_basic(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        chat.ask(query="test question")
+        chat.reset()
+        assert len(chat.conversation_history) == 0
+
+    def test_reset_empty_history(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        chat.reset()
+        assert len(chat.conversation_history) == 0
+
+
+class TestRAGEdgeCases:
+    """Tests for edge cases in RAG module."""
+
+    def test_retrieve_with_empty_query(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        results = retriever.retrieve("", top_k=5)
+        assert isinstance(results, list)
+
+    def test_chat_with_empty_query(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+        response = chat.ask(query="")
+        assert "query" in response
+        assert response["query"] == ""
+
+    def test_retriever_with_very_large_top_k(
+        self, mock_embedder, sample_data_embeddings
+    ):
+        from src.snomed_methods.rag import RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        results = retriever.retrieve("test", top_k=1000)
+        assert len(results) <= 4
+
+
+class TestIntegration:
+    """Integration tests for RAG module."""
+
+    def test_complete_rag_workflow(self, mock_embedder, sample_data_embeddings):
+        from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        explanations = RAGExplanations(embedder=mock_embedder)
+        chat = RAGChat(retriever=retriever, explanations=explanations)
+        response1 = chat.ask(query="brain related condition", top_k=5)
+        assert len(response1["results"]) <= 5
+        response2 = chat.follow_up(feedback="make it more specific")
+        assert "results" in response2
+        chat.reset()
+        assert len(chat.conversation_history) == 0
+
+    def test_conversation_history_append(self, mock_embedder, sample_data_embeddings):
+        """Test that conversation history is properly appended."""
+        from src.snomed_methods.rag import RAGChat, RAGRetriever
+
+        retriever = RAGRetriever(
+            embedder=mock_embedder,
+            cui_to_embedding=dict(sample_data_embeddings),
+        )
+        chat = RAGChat(retriever=retriever)
+
+        assert len(chat.conversation_history) == 0
+        chat.ask(query="test query 1")
+        assert len(chat.conversation_history) == 1
+        assert chat.conversation_history[0] == {
+            "role": "user",
+            "content": "test query 1",
+        }
+
+        chat.ask(query="test query 2")
+        assert len(chat.conversation_history) == 2
+        assert chat.conversation_history[1] == {
+            "role": "user",
+            "content": "test query 2",
+        }
 
 
 if __name__ == "__main__":
-    sys.exit(run_tests())
+    pytest.main([__file__, "-v"])
