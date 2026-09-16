@@ -95,8 +95,6 @@ lint.select = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"llm_concept_embedder.py" = ["T201", "E501", "C901"]
-"semantic_expansion.py" = ["C901", "B028", "E501"]
 "tests/notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
 "notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
 "snomed_methods_examples.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
@@ -104,7 +102,6 @@ lint.select = [
 "test_*.py" = ["T201", "E501", "C901", "B007"]
 "validate_notebooks.py" = ["C901", "T201"]
 "tests/notebook_runner.py" = ["T201", "E501"]
-"src/snomed_methods/benchmarking/embeddings/*.py" = ["C901"]
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
