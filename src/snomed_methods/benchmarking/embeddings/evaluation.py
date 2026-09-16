@@ -98,9 +98,17 @@ def auc_pr(
         recalls.append(recall)
 
     # Compute AUC using trapezoidal rule
-    auc = 0.0
-    for i in range(1, len(recalls)):
-        auc += (recalls[i] - recalls[i - 1]) * (precisions[i] + precisions[i - 1]) / 2
+    if len(recalls) == 0:
+        auc = 0.0
+    elif len(recalls) == 1:
+        # Single point: use rectangle rule (precision at that recall)
+        auc = precisions[0] * recalls[0]
+    else:
+        auc = 0.0
+        for i in range(1, len(recalls)):
+            delta_recall = recalls[i] - recalls[i - 1]
+            avg_precision = (precisions[i] + precisions[i - 1]) / 2
+            auc += delta_recall * avg_precision
 
     return abs(auc)
 
@@ -229,19 +237,19 @@ def evaluate_embedding_similarity(
             normalized_score = (score + 1) / 2
 
             similarity_scores.append(normalized_score)
+
+            if use_umnsrs_scores:
+                # Handle both "label" (UMNSRS) and "umnsrs_score" field names
+                score_field = sample.get("label") or sample.get("umnsrs_score")
+                if score_field is not None:
+                    reference_scores.append(float(score_field) / 1000.0)
+                    true_labels.append(float(score_field) >= 500)  # UMNSRS threshold
+            else:
+                true_labels.append(bool(sample.get("is_similar", False)))
+                reference_scores.append(1.0 if sample.get("is_similar") else 0.0)
         except Exception:
             # Skip pairs that fail to embed
             continue
-
-        if use_umnsrs_scores:
-            # Handle both "label" (UMNSRS) and "umnsrs_score" field names
-            score_field = sample.get("label") or sample.get("umnsrs_score")
-            if score_field is not None:
-                reference_scores.append(float(score_field) / 1000.0)
-                true_labels.append(float(score_field) >= 500)  # UMNSRS threshold
-        else:
-            true_labels.append(bool(sample.get("is_similar", False)))
-            reference_scores.append(1.0 if sample.get("is_similar") else 0.0)
 
     if not similarity_scores:
         return {"num_samples": 0, "error": "No valid pairs could be evaluated"}
