@@ -1125,5 +1125,93 @@ class TestSnomedRelationsGetSubsumedConceptsIntegration:
             pass
 
 
+class TestSnomedRelationsEdgeCases:
+    """Additional edge case tests for robustness."""
+
+    def test_get_pretty_name_list_with_none_values(self):
+        df = pd.DataFrame(
+            {"sourceId": [100], "destinationId": [50], "typeId": [116680003]}
+        )
+        df_path = get_tmp_path("test_none_names.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result = snomed.get_pretty_name_list([None, 100])
+        assert len(result) == 2
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_get_subsumed_concepts_with_none_cui_arg(self):
+        df = pd.DataFrame(
+            {"sourceId": [100], "destinationId": [50], "typeId": [116680003]}
+        )
+        df_path = get_tmp_path("test_none_arg.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(None)
+        assert isinstance(result_ids, list)
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_get_subsumed_concepts_with_empty_dataframe(self):
+        df = pd.DataFrame(
+            {"sourceId": [], "destinationId": [], "typeId": []},
+        )
+        df_path = get_tmp_path("test_empty_df.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.get_subsumed_concepts(50)
+        assert 50 in result_ids
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_get_parents_with_no_parent(self):
+        df = pd.DataFrame(
+            {"sourceId": [100], "destinationId": [50], "typeId": [116680003]}
+        )
+        df_path = get_tmp_path("test_no_parent.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result = snomed.get_parents(100)
+        assert isinstance(result, list)
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_get_children_with_no_children(self):
+        df = pd.DataFrame(
+            {"sourceId": [100], "destinationId": [50], "typeId": [116680003]}
+        )
+        df_path = get_tmp_path("test_no_children.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result = snomed.get_children(50)
+        assert isinstance(result, list)
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+    def test_expand_codes_local_with_invalid_cui(self):
+        df = pd.DataFrame(
+            {"sourceId": [100], "destinationId": [50], "typeId": [116680003]}
+        )
+        df_path = get_tmp_path("test_invalid_local.csv")
+        df.to_csv(df_path, sep="\t", index=False)
+        snomed = SnomedRelations(snomed_rf2_full_path=df_path)
+        result_ids, _ = snomed.expand_codes_local(99999)
+        assert len(result_ids) == 0
+        try:
+            os.unlink(df_path)
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
