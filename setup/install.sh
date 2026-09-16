@@ -132,8 +132,12 @@ done
 
 # Validate proxy variables if proxy mode is enabled
 if [ "$PROXY_MODE" = true ]; then
-    if [ -z "$INTERNAL_PROXY_HOST" ] || [ -z "$INTERNAL_PYPI_MIRROR" ]; then
-        echo "ERROR: Proxy mode (-p/--proxy) requires INTERNAL_PROXY_HOST and INTERNAL_PYPI_MIRROR environment variables to be set." >&2
+    if [ -z "$INTERNAL_PROXY_HOST" ]; then
+        echo "ERROR: Proxy mode (-p/--proxy) requires INTERNAL_PROXY_HOST environment variable to be set." >&2
+        exit 1
+    fi
+    if [ -z "$PYTHON_MIRROR_URL" ] && [ -z "$INTERNAL_PYPI_MIRROR" ]; then
+        echo "ERROR: Proxy mode (-p/--proxy) requires either PYTHON_MIRROR_URL or INTERNAL_PYPI_MIRROR environment variable to be set." >&2
         exit 1
     fi
 fi
@@ -183,7 +187,11 @@ source "$VENV_NAME/bin/activate" || { echo "ERROR: Failed to activate virtual en
 echo "Upgrading pip..."
 pip_upgrade_args=("--upgrade" "pip")
 if [ "$PROXY_MODE" = true ]; then
-    pip_upgrade_args+=("--trusted-host" "$INTERNAL_PROXY_HOST" "-i" "$INTERNAL_PYPI_MIRROR")
+    if [ -n "$INTERNAL_PYPI_MIRROR" ]; then
+        pip_upgrade_args+=("--trusted-host" "$INTERNAL_PROXY_HOST" "-i" "$INTERNAL_PYPI_MIRROR")
+    else
+        pip_upgrade_args+=("-i" "$PYTHON_MIRROR_URL")
+    fi
 fi
 python -m pip install "${pip_upgrade_args[@]}"
 
@@ -209,7 +217,12 @@ echo "EXTRAS=$extras"
 echo "Running pip install -e \"$INSTALL_TARGET\""
 pip_install_args=("-e" "$INSTALL_TARGET")
 if [ "$PROXY_MODE" = true ]; then
-    pip_install_args+=("--trusted-host" "$INTERNAL_PROXY_HOST" "-i" "$INTERNAL_PYPI_MIRROR" "--retries" "5" "--timeout" "60")
+    if [ -n "$INTERNAL_PYPI_MIRROR" ]; then
+        pip_install_args+=("--trusted-host" "$INTERNAL_PROXY_HOST" "-i" "$INTERNAL_PYPI_MIRROR")
+    else
+        pip_install_args+=("-i" "$PYTHON_MIRROR_URL")
+    fi
+    pip_install_args+=("--retries" "5" "--timeout" "60")
 fi
 
 pip install "${pip_install_args[@]}"
@@ -223,11 +236,13 @@ echo "Installing SpaCy model..."
 SPACY_MODEL_URL="https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.1/en_core_web_md-3.7.1-py3-none-any.whl"
 pip_spacy_args=()
 if [ "$PROXY_MODE" = true ]; then
-    pip_spacy_args+=("en-core-web-md==3.7.1")
-    pip_spacy_args+=("--trusted-host" "$INTERNAL_PROXY_HOST")
-    pip_spacy_args+=("-i" "$INTERNAL_PYPI_MIRROR")
-else
-    pip_spacy_args+=("$SPACY_MODEL_URL")
+    if [ -n "$INTERNAL_PYPI_MIRROR" ]; then
+        pip_spacy_args+=("en-core-web-md==3.7.1")
+        pip_spacy_args+=("--trusted-host" "$INTERNAL_PROXY_HOST")
+        pip_spacy_args+=("-i" "$INTERNAL_PYPI_MIRROR")
+    else
+        pip_spacy_args+=("$SPACY_MODEL_URL")
+    fi
 fi
 
     pip install "${pip_spacy_args[@]}"
