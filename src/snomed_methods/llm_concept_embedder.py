@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Clinical Concept Embedder Module
 
@@ -9,7 +11,7 @@ Databases using open-source LLMs or clinical transformers.
 import logging
 import os
 import pickle
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -67,7 +69,7 @@ class ClinicalConceptEmbedder:
                 f"Unsupported backend: {backend}. Use 'hf', 'transformers', or 'ollama'"
             )
 
-    def _init_hf_model(self):
+    def _init_hf_model(self) -> None:
         """Initialize Hugging Face SentenceTransformer."""
         try:
             self.model = SentenceTransformer(
@@ -156,6 +158,102 @@ class ClinicalConceptEmbedder:
         return descriptions
 
     @torch.no_grad()
+    def _load_checkpoint(
+        self,
+        checkpoint_path: Optional[str],
+        concept_texts_length: int,
+    ) -> tuple[list, int]:
+        """Load embeddings from checkpoint if available.
+
+        Args:
+            checkpoint_path: Path to checkpoint file.
+            concept_texts_length: Total number of concepts to process.
+
+        Returns:
+            Tuple of (embeddings_list, processed_count).
+        """
+        if not checkpoint_path or not os.path.exists(checkpoint_path):
+            return [], 0
+
+        try:
+            with open(checkpoint_path, "rb") as f:
+                saved_data = pickle.load(f)
+            all_embeddings = saved_data.get("embeddings", [])
+            processed_count = len(all_embeddings)
+            logger.info(
+                "Resuming from checkpoint: %d / %d concepts",
+                processed_count,
+                concept_texts_length,
+            )
+            return all_embeddings, processed_count
+        except Exception:
+            logger.warning("Failed to load checkpoint, starting fresh")
+            return [], 0
+
+    def _embed_batch_hf(self, batch_texts: List[str]) -> list:
+        """Embed a batch using Hugging Face SentenceTransformer.
+
+        Args:
+            batch_texts: List of text to embed.
+
+        Returns:
+            List of embeddings.
+        """
+        batch_embeddings = self.model.encode(
+            batch_texts,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+        return list(batch_embeddings)
+
+    def _embed_batch_transformers(self, batch_texts: List[str]) -> list:
+        """Embed a batch using Hugging Face Transformers.
+
+        Args:
+            batch_texts: List of text to embed.
+
+        Returns:
+            List of embeddings.
+        """
+        toks = self.tokenizer.batch_encode_plus(
+            batch_texts,
+            padding="max_length",
+            max_length=25,
+            truncation=True,
+            return_tensors="pt",
+        )
+        toks_device: Dict[str, torch.Tensor] = {}
+        for k, v in toks.items():
+            toks_device[k] = v.to(self.device)
+
+        with torch.no_grad():
+            output = self.model(**toks_device)
+            cls_rep = output[0][:, 0, :]
+            batch_embeddings = cls_rep.cpu().numpy()
+            return list(batch_embeddings)
+
+    def _embed_batch_ollama(self, batch_texts: List[str]) -> list:
+        """Embed a batch using Ollama API.
+
+        Args:
+            batch_texts: List of text to embed.
+
+        Returns:
+            List of embeddings.
+        """
+        batch_embeddings_list = []
+        for text in batch_texts:
+            try:
+                response = self.ollama.embeddings(
+                    model=self.model_name_or_path, prompt=text
+                )
+                embedding = np.array(response["embedding"])
+                batch_embeddings_list.append(embedding)
+            except Exception as e:
+                logger.error("Error embedding text: %s. Skipping.", e)
+
+        return batch_embeddings_list
+
     def generate_embeddings(
         self,
         concept_texts: List[str],
@@ -179,69 +277,26 @@ class ClinicalConceptEmbedder:
 
         effective_batch_size = batch_size if batch_size is not None else self.batch_size
 
-        all_embeddings = []
-        start_idx = 0
-        processed_count = start_idx
-
-        if checkpoint_path and os.path.exists(checkpoint_path):
-            try:
-                with open(checkpoint_path, "rb") as f:
-                    saved_data = pickle.load(f)
-                all_embeddings.extend(saved_data.get("embeddings", []))
-                processed_count = len(all_embeddings)
-                logger.info(
-                    "Resuming from checkpoint: %d / %d concepts",
-                    processed_count,
-                    len(concept_texts),
-                )
-            except Exception:
-                logger.warning("Failed to load checkpoint, starting fresh")
+        all_embeddings, processed_count = self._load_checkpoint(
+            checkpoint_path, len(concept_texts)
+        )
 
         for i in tqdm(
-            range(start_idx, len(concept_texts), effective_batch_size),
+            range(processed_count, len(concept_texts), effective_batch_size),
             desc="Generating embeddings",
         ):
             batch_texts = concept_texts[i : i + effective_batch_size]
-            batch_embeddings_list = []
 
             if self._model_type == "hf":
-                batch_embeddings = self.model.encode(
-                    batch_texts,
-                    convert_to_numpy=True,
-                    show_progress_bar=False,
-                )
-                batch_embeddings_list.extend(batch_embeddings)
+                batch_embeddings_list = self._embed_batch_hf(batch_texts)
 
             elif self._model_type == "transformers":
-                toks = self.tokenizer.batch_encode_plus(
-                    batch_texts,
-                    padding="max_length",
-                    max_length=25,
-                    truncation=True,
-                    return_tensors="pt",
-                )
-                toks_device = {}
-                for k, v in toks.items():
-                    toks_device[k] = v.to(self.device)
-
-                with torch.no_grad():
-                    output = self.model(**toks_device)
-                    cls_rep = output[0][:, 0, :]  # Use CLS representation
-                    batch_embeddings = cls_rep.cpu().numpy()
-                    batch_embeddings_list.extend(batch_embeddings)
+                batch_embeddings_list = self._embed_batch_transformers(batch_texts)
 
             elif self._model_type == "ollama":
-                for text in batch_texts:
-                    try:
-                        response = self.ollama.embeddings(
-                            model=self.model_name_or_path, prompt=text
-                        )
-                        embedding = np.array(response["embedding"])
-                        batch_embeddings_list.append(embedding)
-                    except Exception as e:
-                        logger.error(
-                            "Error embedding text (index %d): %s. Skipping.", i, e
-                        )
+                batch_embeddings_list = self._embed_batch_ollama(batch_texts)
+            else:
+                raise ValueError(f"Unknown model type: {self._model_type}")
 
             all_embeddings.extend(batch_embeddings_list)
 
@@ -266,7 +321,7 @@ class ClinicalConceptEmbedder:
 
     def export_embeddings(
         self, embeddings_dict: Dict[str, np.ndarray], output_path: str
-    ):
+    ) -> None:
         """Save embeddings to disk.
 
         Args:
@@ -321,7 +376,8 @@ class ConceptVectorSearch:
             with open(path, "rb") as f:
                 data = pickle.load(f)
 
-        # Handle both old format (just dict) and new format {'embeddings': ..., 'names': ...}
+        # Handle both old format (just dict) and new format with
+        # embeddings and names keys
         if isinstance(data, dict) and "embeddings" in data:
             return data["embeddings"]
         if isinstance(data, dict):
@@ -361,7 +417,7 @@ class ConceptVectorSearch:
             else:
                 self.embeddings_dict = embeddings_dict_or_path
 
-    def _load_embeddings_from_file(self, path: str):
+    def _load_embeddings_from_file(self, path: str) -> None:
         """Load embeddings from disk."""
         if path.endswith(".pkl"):
             with open(path, "rb") as f:
@@ -386,7 +442,7 @@ class ConceptVectorSearch:
             else:
                 self.embeddings_dict = data
 
-    def build_index(self, index_type: str = "FlatIP"):
+    def build_index(self, index_type: str = "FlatIP") -> None:
         """Build FAISS index from embeddings.
 
         Args:
@@ -397,7 +453,8 @@ class ConceptVectorSearch:
             import faiss
         except ImportError:
             raise RuntimeError(
-                "FAISS not installed. Run: pip install faiss-cpu or pip install faiss-gpu"
+                "FAISS not installed. "
+                "Run: pip install faiss-cpu or pip install faiss-gpu"
             ) from None
 
         if not self.embeddings_dict:
@@ -434,7 +491,8 @@ class ConceptVectorSearch:
         """Search for similar concepts.
 
         Args:
-            query_text: Query concept description (optional if query_embedding provided).
+            query_text: Query concept description.
+                Optional if query_embedding provided.
             query_embedding: Pre-computed query embedding array.
             top_k: Number of results to return.
 
@@ -510,7 +568,7 @@ class ConceptVectorSearch:
             raise RuntimeError(f"Failed to embed query: {e}") from None
 
 
-def load_concepts_from_medcat(cat) -> pd.DataFrame:
+def load_concepts_from_medcat(cat: Any) -> pd.DataFrame:
     """Load concepts from a MedCAT CAT object.
 
     Args:
@@ -550,7 +608,7 @@ def load_concepts_from_medcat(cat) -> pd.DataFrame:
     return pd.DataFrame(concepts_data)
 
 
-def load_concepts_from_cdb(cdb) -> pd.DataFrame:
+def load_concepts_from_cdb(cdb: Any) -> pd.DataFrame:
     """Load concepts from a MedCAT ConceptDatabase directly.
 
     Args:

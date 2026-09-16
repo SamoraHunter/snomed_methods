@@ -1,6 +1,8 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation metrics and utilities for clinical concept annotation benchmarking."""
 
-from typing import List, Set
+from typing import Any, List, Set
 
 import numpy as np
 
@@ -136,9 +138,9 @@ def exact_match_rate(
 
 
 def evaluate_annotator(
-    annotator_func,
+    annotator_func: Any,
     dataset: List[dict],
-    k_values: List[int] = None,
+    k_values: List[int] | None = None,
 ) -> dict:
     """Evaluate a concept annotator on annotation benchmark dataset.
 
@@ -217,7 +219,7 @@ def evaluate_annotator(
     return results
 
 
-def _extract_predicted_cuis(prediction_result) -> List[str]:
+def _extract_predicted_cuis(prediction_result: Any) -> List[str]:
     """Extract predicted CUIs from various prediction formats."""
     if hasattr(prediction_result, "top_concepts"):
         return [c.concept_id for c in prediction_result.top_concepts]
@@ -230,7 +232,7 @@ def _extract_predicted_cuis(prediction_result) -> List[str]:
         return []
 
 
-def benchmark_results_to_dataframe(results: dict):
+def benchmark_results_to_dataframe(results: dict) -> Any:
     """Convert benchmark results to pandas DataFrame.
 
     Args:

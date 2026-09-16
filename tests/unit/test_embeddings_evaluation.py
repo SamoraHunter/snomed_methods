@@ -1,5 +1,7 @@
 """Unit tests for embedding evaluation metrics."""
 
+from typing import NoReturn
+
 import pytest
 
 
@@ -196,7 +198,7 @@ class TestEvaluateEmbeddingSimilarity:
         )
 
         class MockEmbedder:
-            def generate_embeddings(self, texts, batch_size=None):
+            def generate_embeddings(self, texts, batch_size=None) -> NoReturn:
                 raise Exception("Error")
 
         dataset = [{"concept_1": "a", "concept_2": "b"}]
@@ -576,7 +578,7 @@ class TestEvaluateEmbeddingSimilarityDetailed:
         )
 
         class MockEmbedder:
-            def generate_embeddings(self, texts, batch_size=None):
+            def generate_embeddings(self, texts, batch_size=None) -> NoReturn:
                 raise Exception("Embedding error")
 
         dataset = [{"concept_1": "a", "concept_2": "b"}]

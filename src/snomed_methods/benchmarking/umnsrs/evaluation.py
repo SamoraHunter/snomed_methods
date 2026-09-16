@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation utilities for UMNSRS benchmarking."""
 
 from typing import Callable

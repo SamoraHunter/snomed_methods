@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Retrieval-Augmented Generation (RAG) Module for SNOMED CT
 
@@ -34,7 +36,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
-def load_concepts_from_cdb(cdb) -> tuple:
+def load_concepts_from_cdb(cdb: Any) -> tuple:
     """Load concepts from MedCAT CDB."""
     cui_to_name = {}
     for cui, name in cdb.cui2preferred_name.items():
@@ -344,7 +346,7 @@ class RAGExplanations:
 
         context_items = []
         for i, (c, n, s) in enumerate(retrieved_concepts[:3]):
-            context_items.append(f"  {i+1}. [{s:.3f}] {n} ({c})")
+            context_items.append(f"  {i + 1}. [{s:.3f}] {n} ({c})")
 
         explanation_prompt = f"""Query: "{query}"
 

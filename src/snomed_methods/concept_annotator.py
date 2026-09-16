@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Clinical Concept Annotator Module
 
@@ -8,7 +10,7 @@ Enables EHR integration by converting patient narratives, clinical notes,
 and other free-text inputs into structured SNOMED CT concepts.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class AnnotationResult:
@@ -51,9 +53,7 @@ class AnnotationResult:
         return len(self.concept_matches)
 
     def __repr__(self) -> str:
-        return (
-            f"AnnotationResult(concepts={len(self)}, " f"terms={len(self.text_terms)})"
-        )
+        return f"AnnotationResult(concepts={len(self)}, terms={len(self.text_terms)})"
 
 
 class MatchedConcept:
@@ -150,7 +150,7 @@ class ClinicalConceptAnnotator:
         self._term_lookup = None
         self._embedder = None
 
-    def _get_hybrid_search(self):
+    def _get_hybrid_search(self) -> Any:
         """Get or create HybridSearch instance."""
         if self._hybrid_search is None:
             try:

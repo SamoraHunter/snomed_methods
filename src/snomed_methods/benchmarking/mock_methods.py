@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Mock/example implementations of benchmark methods for testing purposes.
 
 This module provides simple placeholder functions that can be used to test

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """SNOMED CT Term Lookup Module
 
 This module provides functionality for searching SNOMED CT concepts by term.
@@ -6,7 +8,7 @@ This module provides functionality for searching SNOMED CT concepts by term.
 
 import os
 import sys
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 
 class SnomedTermLookup:
@@ -280,7 +282,7 @@ def create_term_lookup_from_directory(
     return SnomedTermLookup(files[0], active_only=active_only)
 
 
-def main():
+def main() -> Any:
     """Run demo and return result count."""
     import sys
 

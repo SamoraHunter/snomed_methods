@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Semantic Expansion Module for SNOMED CT.
 
@@ -21,6 +23,8 @@ import importlib.util
 import os
 from typing import Dict, List, Optional, Set, Tuple, Union
 
+import pandas as pd
+
 from snomed_methods.snomed_term_lookup import SnomedTermLookup
 
 
@@ -31,8 +35,10 @@ class SemanticSearch:
         """Initialize searcher with UK Clinical RF2 data path.
 
         Args:
-            uk_path: Path to UK Clinical RF2 directory
-                      Default: ../uk_sct2cl_42.2.0/SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z (relative to script)
+            uk_path: Path to UK Clinical RF2 directory.
+                Default: ../uk_sct2cl_42.2.0/
+                SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z
+                (relative to script)
         """
         if uk_path is None:
             script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -104,7 +110,7 @@ class SemanticSearch:
         import warnings
 
         if importlib.util.find_spec("snomed_term_lookup") is None:
-            warnings.warn("snomed-term-lookup not available")
+            warnings.warn("snomed-term-lookup not available", stacklevel=2)
             return set()
 
         results: Set[Tuple[str, str]] = set()
@@ -133,6 +139,117 @@ class SemanticSearch:
 
         return results
 
+    def _load_relationship_file(self) -> pd.DataFrame | None:
+        """Load and filter active relationships from the SNOMED relationship file.
+
+        Returns:
+            DataFrame with active relationships, or None if file not found.
+        """
+        rel_file = os.path.join(
+            self.uk_path,
+            "Full",
+            "Terminology",
+            "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+        )
+
+        if not os.path.exists(rel_file):
+            return None
+
+        try:
+            rel_df = pd.read_csv(rel_file, sep="\t")
+            return rel_df[rel_df["active"] == 1]
+        except Exception:
+            return None
+
+    def _create_lookup_if_available(self) -> Optional[SnomedTermLookup]:
+        """Create SnomedTermLookup instance if available.
+
+        Returns:
+            SnomedTermLookup instance or None.
+        """
+        if importlib.util.find_spec("snomed_term_lookup") is not None:
+            from snomed_methods.snomed_term_lookup import (
+                create_term_lookup_from_directory,
+            )
+
+            return create_term_lookup_from_directory(self.uk_path)
+        return None
+
+    def _process_concept(
+        self,
+        current_cui: str,
+        lookup: Optional[SnomedTermLookup],
+        results_codes: List[str],
+        results_names: List[str],
+        rel_active: pd.DataFrame | None,
+        processed: Set[str],
+        queue: List[str],
+    ) -> tuple[List[str], List[str], bool]:
+        """Process a single concept and update lists/queue.
+
+        Args:
+            current_cui: Current concept ID to process
+            lookup: SnomedTermLookup instance or None
+            results_codes: Output list of codes (modified in place)
+            results_names: Output list of names (modified in place)
+            rel_active: Active relationships dataframe or None
+            processed: Set of already processed concepts (modified in place)
+            queue: Queue of concepts to process (modified in place)
+
+        Returns:
+            Tuple of (updated_codes, updated_names, should_continue).
+        """
+        processed.add(current_cui)
+        results_codes.append(current_cui)
+
+        name = self._get_concept_name(current_cui, lookup)
+        results_names.append(name or f"CUI: {current_cui}")
+
+        if rel_active is None:
+            return results_codes, results_names, True
+
+        try:
+            cui_int = int(current_cui)
+        except ValueError:
+            return results_codes, results_names, True
+
+        parent_rows = rel_active[rel_active["sourceId"] == cui_int]
+        for _, row in parent_rows.iterrows():
+            p = str(row["destinationId"])
+            if p not in processed and p not in queue:
+                queue.append(p)
+
+        child_rows = rel_active[rel_active["destinationId"] == cui_int]
+        for _, row in child_rows.iterrows():
+            c = str(row["sourceId"])
+            if c not in processed and c not in queue:
+                queue.append(c)
+
+        return results_codes, results_names, True
+
+    def _get_concept_name(
+        self, current_cui: str, lookup: Optional[SnomedTermLookup]
+    ) -> Optional[str]:
+        """Get the preferred name for a concept.
+
+        Args:
+            current_cui: Concept ID
+            lookup: SnomedTermLookup instance or None
+
+        Returns:
+            Preferred name or None.
+        """
+        if not lookup:
+            return None
+
+        try:
+            info = lookup.getconcept_info(current_cui)
+            if info and "preferred_name" in info:
+                return info["preferred_name"]
+        except Exception:
+            pass
+        return None
+
     def _hierarchy_expansion(
         self,
         cui_list: List[str],
@@ -150,31 +267,11 @@ class SemanticSearch:
         Returns:
             Tuple of (codes, names) lists
         """
-        import pandas as pd
-
-        rel_file = os.path.join(
-            self.uk_path,
-            "Full",
-            "Terminology",
-            "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
-        )
-
-        if not os.path.exists(rel_file):
+        rel_active = self._load_relationship_file()
+        if rel_active is None:
             return [], []
 
-        try:
-            rel_df = pd.read_csv(rel_file, sep="\t")
-            rel_active = rel_df[rel_df["active"] == 1]
-        except Exception:
-            return [], []
-
-        lookup: Optional[SnomedTermLookup] = None
-        if importlib.util.find_spec("snomed_term_lookup") is not None:
-            from snomed_methods.snomed_term_lookup import (
-                create_term_lookup_from_directory,
-            )
-
-            lookup = create_term_lookup_from_directory(self.uk_path)
+        lookup = self._create_lookup_if_available()
 
         results_codes: List[str] = []
         results_names: List[str] = []
@@ -186,37 +283,16 @@ class SemanticSearch:
 
             if current_cui in processed:
                 continue
-            processed.add(current_cui)
 
-            name: Optional[str] = None
-            if lookup:
-                try:
-                    info = lookup.getconcept_info(current_cui)
-                    if info and "preferred_name" in info:
-                        name = info["preferred_name"]
-                except Exception:
-                    pass
-
-            results_codes.append(current_cui)
-            results_names.append(name or f"CUI: {current_cui}")
-
-            try:
-                cui_int = int(current_cui)
-
-                parent_rows = rel_active[rel_active["sourceId"] == cui_int]
-                for _, row in parent_rows.iterrows():
-                    p = str(row["destinationId"])
-                    if p not in processed and p not in queue:
-                        queue.append(p)
-
-                child_rows = rel_active[rel_active["destinationId"] == cui_int]
-                for _, row in child_rows.iterrows():
-                    c = str(row["sourceId"])
-                    if c not in processed and c not in queue:
-                        queue.append(c)
-
-            except ValueError:
-                continue
+            results_codes, results_names, _ = self._process_concept(
+                current_cui,
+                lookup,
+                results_codes,
+                results_names,
+                rel_active,
+                processed,
+                queue,
+            )
 
         return results_codes, results_names
 
@@ -336,9 +412,9 @@ class SemanticSearch:
             base_term = "_".join(search_terms[:2])
 
         log_messages: List[str] = []
-        log_messages.append(f"{'='*60}")
+        log_messages.append(f"{'=' * 60}")
         log_messages.append("SEMANTIC EXPANSION SEARCH")
-        log_messages.append(f"{'='*60}")
+        log_messages.append(f"{'=' * 60}")
         log_messages.append(f"\nInput term(s): {search_terms}")
         log_messages.append("Configuration:")
         log_messages.append(f"  - max_concepts: {max_concepts}")
@@ -352,7 +428,8 @@ class SemanticSearch:
         )
         if importlib.util.find_spec("snomed_term_lookup") is None:
             raise ImportError(
-                "snomed-term-lookup package required. Install with: pip install snomed-term-lookup"
+                "snomed-term-lookup package required. "
+                "Install with: pip install snomed-term-lookup"
             )
 
         from snomed_methods.snomed_term_lookup import (
@@ -401,9 +478,9 @@ class SemanticSearch:
         core_count = sum(1 for name in combined.values() if base_term in name.lower())
         expanded_count = len(combined) - core_count
 
-        log_messages.append(f"\n{'='*60}")
+        log_messages.append(f"\n{'=' * 60}")
         log_messages.append("SEARCH COMPLETE")
-        log_messages.append(f"{'='*60}")
+        log_messages.append(f"{'=' * 60}")
         log_messages.append(f"Total concepts: {len(combined)}")
         log_messages.append(f"  - Core (matches input): {core_count}")
         log_messages.append(f"  - Expanded (related): {expanded_count}")

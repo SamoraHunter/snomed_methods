@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Benchmarking utilities for SNOMED CT hierarchy expansion tasks."""
 
 from .dataset import generate_hierarchy_dataset, load_hierarchy_datasets

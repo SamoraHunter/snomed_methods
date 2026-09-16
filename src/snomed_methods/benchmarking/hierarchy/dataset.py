@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Dataset generation and loading for hierarchy expansion benchmarking."""
 
 from typing import List, Optional

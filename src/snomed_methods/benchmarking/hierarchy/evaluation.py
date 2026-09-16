@@ -1,6 +1,8 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation metrics for hierarchy expansion benchmarking."""
 
-from typing import List, Set
+from typing import Any, List, Set
 
 import numpy as np
 
@@ -107,9 +109,9 @@ def jaccard_similarity(
 
 
 def evaluate_hierarchy_expansion(
-    expansion_func,
+    expansion_func: Any,
     dataset: List[dict],
-    k_values: List[int] = None,
+    k_values: List[int] | None = None,
 ) -> dict:
     """Evaluate a hierarchy expansion method on benchmark dataset.
 

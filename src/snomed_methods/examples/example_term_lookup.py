@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Example usage of SnomedTermLookup for finding SNOMED CT codes by term.
 
@@ -25,7 +27,7 @@ from snomed_term_lookup import create_term_lookup_from_directory
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-def example_basic_search():
+def example_basic_search() -> None:
     """Demonstrate basic term search with prefix matching."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_dir = os.path.join(
@@ -43,7 +45,7 @@ def example_basic_search():
         pass
 
 
-def example_case_insensitive():
+def example_case_insensitive() -> None:
     """Demonstrate case-insensitive search functionality."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_dir = os.path.join(
@@ -58,7 +60,7 @@ def example_case_insensitive():
     lookup.find_concepts_by_term("Meningioma", ignore_case=True, top_n=5)
 
 
-def example_fuzzy_search():
+def example_fuzzy_search() -> None:
     """Demonstrate fuzzy string matching for typo-tolerant searches."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_dir = os.path.join(
@@ -76,7 +78,7 @@ def example_fuzzy_search():
         pass
 
 
-def example_batch_search():
+def example_batch_search() -> None:
     """Demonstrate batch searching for multiple terms at once."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_dir = os.path.join(
@@ -93,7 +95,7 @@ def example_batch_search():
     lookup.find_concepts_batch(terms_to_search, match_prefix=True)
 
 
-def example_concept_info():
+def example_concept_info() -> None:
     """Demonstrate how to retrieve detailed information about a specific concept."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_dir = os.path.join(
@@ -113,7 +115,7 @@ def example_concept_info():
         lookup.getconcept_info(_cui)
 
 
-def example_with_medcat():
+def example_with_medcat() -> None:
     """Demonstrate enhanced search capabilities using MedCAT integration."""
     try:
         from medcat.cat import CAT
@@ -136,7 +138,7 @@ def example_with_medcat():
         pass
 
 
-def main():
+def main() -> None:
     """Run all example functions sequentially."""
     example_basic_search()
     example_case_insensitive()

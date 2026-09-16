@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 UMLS CUI Mapper for SNOMED CT
 
@@ -27,7 +29,7 @@ class UMLSCIMapper:
         self._snomed_to_umls = {}
         self._umls_to_snomed = {}
 
-    def _auto_detect_paths(self):
+    def _auto_detect_paths(self) -> None:
         """Auto-detect RF2 mapping files."""
         import glob
 

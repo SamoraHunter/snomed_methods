@@ -902,7 +902,7 @@ class TestSnomedRelationsGetSubsumedConceptsSemanticTags:
         snomed = SnomedRelations(snomed_rf2_full_path=df_path)
         snomed.medcat = True
 
-        def mock_cat(cui):
+        def mock_cat(cui) -> None:
             return None  # Mock cat object
 
         class MockCDB:

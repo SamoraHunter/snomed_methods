@@ -1,7 +1,9 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """UMNSRS Dataset loader for benchmarking semantic similarity/relatedness tasks."""
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 try:
     from datasets import load_dataset
@@ -29,7 +31,7 @@ def download_umnsrs(
     split: str = "train",
     cache_dir: Optional[str] = None,
     convert_labels_to_float: bool = True,
-):
+) -> Any:
     """Download and load the UMNSRS dataset from Hugging Face.
 
     Args:
@@ -63,8 +65,7 @@ def download_umnsrs(
     """
     if load_dataset is None:
         raise ImportError(
-            "The 'datasets' library is required. Install it with: "
-            "pip install datasets"
+            "The 'datasets' library is required. Install it with: pip install datasets"
         )
 
     valid_subsets = [

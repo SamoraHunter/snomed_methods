@@ -1,6 +1,8 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation metrics for term lookup benchmarking."""
 
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 
@@ -114,7 +116,7 @@ def hit_rate(
 
 
 def _evaluate_single_sample(
-    lookup_func,
+    lookup_func: Any,
     sample: dict,
 ) -> Tuple[dict, List[float], List[float]]:
     """Evaluate a single dataset sample and return results.
@@ -167,9 +169,9 @@ def _evaluate_single_sample(
 
 
 def evaluate_term_lookup(
-    lookup_func,
+    lookup_func: Any,
     dataset: List[dict],
-    k_values: List[int] = None,
+    k_values: List[int] | None = None,
 ) -> dict:
     """Evaluate a term lookup method on benchmark dataset.
 
@@ -237,7 +239,7 @@ def evaluate_term_lookup(
     return results
 
 
-def _extract_result_cuis(prediction_result) -> List[str]:
+def _extract_result_cuis(prediction_result: Any) -> List[str]:
     """Extract result CUIs from various prediction formats."""
     if isinstance(prediction_result, list):
         if not prediction_result:

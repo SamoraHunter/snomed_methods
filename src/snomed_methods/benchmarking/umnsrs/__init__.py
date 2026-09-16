@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """UMNSRS benchmarking module for semantic similarity and relatedness evaluation."""
 
 from .dataset import (

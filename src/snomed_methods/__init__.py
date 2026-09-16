@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 from snomed_methods.concept_annotator import (
     AnnotationResult,
     ClinicalConceptAnnotator,
@@ -38,7 +40,7 @@ from snomed_methods.snomed_term_lookup import (
 )
 
 
-def _get_umls_mapper():
+def _get_umls_mapper() -> dict:
     """Lazy import for UMLSCIMapper to avoid torch dependency."""
     try:
         from snomed_methods.umlsci_mapper import (

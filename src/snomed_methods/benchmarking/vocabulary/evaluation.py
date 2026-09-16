@@ -1,6 +1,8 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation metrics for vocabulary mapping benchmarking."""
 
-from typing import List, Set
+from typing import Any, List, Set
 
 import numpy as np
 
@@ -125,9 +127,9 @@ def mean_reciprocal_rank(
 
 
 def evaluate_mapper(
-    mapper_func,
+    mapper_func: Any,
     dataset: List[dict],
-    k_values: List[int] = None,
+    k_values: List[int] | None = None,
 ) -> dict:
     """Evaluate a vocabulary mapper on benchmark dataset.
 

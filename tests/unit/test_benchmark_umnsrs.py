@@ -30,7 +30,7 @@ class TestUMNSRSDataset:
             {"text_1": "A", "text_2": "B", "label": 600.0},
         ]
 
-        def mock_model(t1, t2):
+        def mock_model(t1, t2) -> float:
             return 500.0
 
         results = evaluate_model(mock_model, mock_pairs, metric="mae")
@@ -90,7 +90,7 @@ class TestBenchmarkFunctions:
         """Test evaluating with single metric."""
         from snomed_methods.benchmarking.umnsrs import evaluate_model
 
-        def mock_model(text1, text2):
+        def mock_model(text1, text2) -> float:
             return 500.0
 
         pairs = [

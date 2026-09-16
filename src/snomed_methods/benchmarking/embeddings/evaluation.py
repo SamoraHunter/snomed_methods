@@ -1,6 +1,8 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Evaluation metrics and utilities for embedding semantic similarity benchmarking."""
 
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 
@@ -170,12 +172,55 @@ def correlation_similarity(
     return float(corr), float(p_value)
 
 
+def _extract_concept_pair(sample: dict) -> tuple[str, str] | None:
+    """Extract concept pair from sample dict.
+
+    Args:
+        sample: Dict with concept info (SNOMED CUI pairs or text pairs).
+
+    Returns:
+        Tuple of (concept_1, concept_2) strings, or None if invalid.
+    """
+    if "concept_1" in sample and "concept_2" in sample:
+        return str(sample["concept_1"]), str(sample["concept_2"])
+    if "text_1" in sample and "text_2" in sample:
+        return str(sample["text_1"]), str(sample["text_2"])
+    return None
+
+
+def _process_similarity_sample(
+    embedder: Any,
+    concept_1: str,
+    concept_2: str,
+) -> tuple[float | None, float | None]:
+    """Process a single sample pair to get similarity scores.
+
+    Args:
+        embedder: Embedder instance.
+        concept_1, concept_2: Concept identifiers to compare.
+
+    Returns:
+        Tuple of (normalized_score, reference_score) or (None, None) on failure.
+    """
+    try:
+        emb1 = embedder.generate_embeddings([concept_1], batch_size=1)[0]
+        emb2 = embedder.generate_embeddings([concept_2], batch_size=1)[0]
+
+        similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
+        score = float(similarity)
+        normalized_score = (score + 1) / 2
+        return normalized_score, None
+
+    except Exception:
+        return None, None
+
+
 def evaluate_embedding_similarity(
-    embedder,
-    dataset: List[dict],
+    embedder: Any,
+    dataset: list[dict],
     threshold: float = 0.5,
     use_umnsrs_scores: bool = True,
-) -> dict:  # noqa: C901
+) -> dict:
     """Evaluate an embedding model on semantic similarity benchmark.
 
     Args:
@@ -188,16 +233,6 @@ def evaluate_embedding_similarity(
     Returns:
         Dict with evaluation metrics
     """
-    try:
-        import importlib.util
-
-        if not importlib.util.find_spec("snomed_methods.llm_concept_embedder"):
-            raise ImportError(
-                "snomed_methods.llm_concept_embedder not available. "
-                "Ensure the package is installed."
-            )
-    except ImportError:
-        pass
     if not dataset:
         return {
             "num_samples": 0,
@@ -207,54 +242,35 @@ def evaluate_embedding_similarity(
             "f1": 0.0,
         }
 
-    # Compute similarity scores for all pairs
     similarity_scores = []
     true_labels = []
     reference_scores = []
 
     for sample in dataset:
-        # Handle both formats: SNOMED CUI pairs or text pairs (UMNSRS)
-        if "concept_1" in sample and "concept_2" in sample:
-            concept_1 = str(sample["concept_1"])
-            concept_2 = str(sample["concept_2"])
-        elif "text_1" in sample and "text_2" in sample:
-            concept_1 = str(sample["text_1"])
-            concept_2 = str(sample["text_2"])
+        pair = _extract_concept_pair(sample)
+        if pair is None:
+            continue
+
+        concept_1, concept_2 = pair
+        normalized_score, _ = _process_similarity_sample(embedder, concept_1, concept_2)
+
+        if normalized_score is None:
+            continue
+
+        similarity_scores.append(normalized_score)
+
+        if use_umnsrs_scores:
+            score_field = sample.get("label") or sample.get("umnsrs_score")
+            if score_field is not None:
+                reference_scores.append(float(score_field) / 1000.0)
+                true_labels.append(float(score_field) >= 500)
         else:
-            # Skip samples without required fields
-            continue
-
-        try:
-            # Get embeddings and compute cosine similarity
-            emb1 = embedder.generate_embeddings([str(concept_1)], batch_size=1)[0]
-            emb2 = embedder.generate_embeddings([str(concept_2)], batch_size=1)[0]
-
-            # Compute cosine similarity
-            score = float(
-                np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
-            )
-            # Normalize to [0, 1] for easier thresholding
-            normalized_score = (score + 1) / 2
-
-            similarity_scores.append(normalized_score)
-
-            if use_umnsrs_scores:
-                # Handle both "label" (UMNSRS) and "umnsrs_score" field names
-                score_field = sample.get("label") or sample.get("umnsrs_score")
-                if score_field is not None:
-                    reference_scores.append(float(score_field) / 1000.0)
-                    true_labels.append(float(score_field) >= 500)  # UMNSRS threshold
-            else:
-                true_labels.append(bool(sample.get("is_similar", False)))
-                reference_scores.append(1.0 if sample.get("is_similar") else 0.0)
-        except Exception:
-            # Skip pairs that fail to embed
-            continue
+            true_labels.append(bool(sample.get("is_similar", False)))
+            reference_scores.append(1.0 if sample.get("is_similar") else 0.0)
 
     if not similarity_scores:
         return {"num_samples": 0, "error": "No valid pairs could be evaluated"}
 
-    # Compute metrics
     accuracy = accuracy_at_threshold(similarity_scores, true_labels, threshold)
     precision, recall, f1 = precision_recall_f1(
         similarity_scores, true_labels, threshold

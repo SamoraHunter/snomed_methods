@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """Benchmarking utilities for vocabulary mapping tasks."""
 
 from .dataset import generate_mapping_dataset, load_mapping_datasets

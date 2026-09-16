@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 """
 Concept Mapping Module for SNOMED CT
 
@@ -11,7 +13,7 @@ Provides tools for mapping SNOMED CT concepts to other terminologies:
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class ConceptMapper:
@@ -234,7 +236,7 @@ class ConceptMapper:
         }
         return loinc_descriptions.get(loinc_code, "")
 
-    def _calculate_confidence(self, row) -> float:
+    def _calculate_confidence(self, row: Any) -> float:
         """Calculate mapping confidence score based on map rule characteristics.
 
         Args:
@@ -346,7 +348,6 @@ class ConceptMapper:
             pass
 
         if not mappings:
-
             try:
                 lookup = self._get_term_lookup()
                 info = lookup.getconcept_info(str(snomed_cui))
@@ -456,7 +457,7 @@ class ConceptMapper:
             return os.path.basename(self.loinc_map_file)
         return "default SNOMED CT reference set"
 
-    def _get_term_lookup(self):  # Returns: SnomedTermLookup instance
+    def _get_term_lookup(self) -> Any:
         """Get or create a SnomedTermLookup instance."""
         from snomed_methods import (
             SnomedTermLookup,

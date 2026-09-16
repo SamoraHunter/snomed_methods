@@ -1,3 +1,5 @@
+# Copyright (c) 2026 SNOMED Methods Contributors
+# SPDX-License-Identifier: MIT
 import os
 import re
 import sys
@@ -10,7 +12,6 @@ from tqdm import tqdm
 
 
 class SnomedRelations:
-
     def __init__(
         self,
         medcat: bool = False,
@@ -158,7 +159,6 @@ class SnomedRelations:
     ) -> Tuple[List[int], List[str]]:
 
         if debug:
-
             pass
 
         retrieved_codes_temp = []
@@ -222,7 +222,6 @@ class SnomedRelations:
     ) -> Tuple[List[int], List[str]]:
 
         if debug:
-
             pass
 
         retrieved_names_temp = []
@@ -239,7 +238,6 @@ class SnomedRelations:
     ) -> Tuple[List[int], List[str]]:
 
         if debug:
-
             pass
 
         retrieved_names_temp = []
@@ -298,7 +296,6 @@ class SnomedRelations:
         retrieved_names: List[str] = []
 
         for _i in tqdm(range(n_recursion)):
-
             if debug:
                 pass
 
@@ -321,7 +318,6 @@ class SnomedRelations:
                 retrieved_names = list(set(retrieved_names))
 
         if debug:
-
             pass
 
         return retrieved_codes, retrieved_names
@@ -353,7 +349,6 @@ class SnomedRelations:
         key_list = list(res.keys())
 
         for elem in key_list:
-
             codes.append(elem)
 
         names = self.get_pretty_name_list(codes)
@@ -433,15 +428,12 @@ class SnomedRelations:
             sim_res = res.get(target_cui)
 
             if sim_res is not None:
-
                 sim_score = sim_res.get("sim")
 
             else:
-
                 sim_score = None
 
             if sim_score is not None:
-
                 results_list.append(sim_score)
             else:
                 results_list.append(np.nan)
@@ -466,7 +458,6 @@ class SnomedRelations:
             return df
 
         for elem in target_concept_sim_list:
-
             df[f"{elem}_concept_sim"] = self.get_medcat_similar_score(
                 elem, target_cui_list, debug=True
             )
@@ -788,7 +779,7 @@ class SnomedRelations:
         all_concepts = [cui]
         depth_map = {cui: 0}
 
-        def traverse(concept_id: int, depth: int):
+        def traverse(concept_id: int, depth: int) -> None:
             if depth > max_depth or concept_id in visited_concepts:
                 return
 
