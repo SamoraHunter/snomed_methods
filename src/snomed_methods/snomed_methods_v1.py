@@ -153,41 +153,6 @@ class SnomedRelations:
 
         return self.expand_codes_local(filter_root_cui, debug=debug)
 
-    # def expand_codes_local(self, filter_root_cui, debug = False):
-
-    #     if debug:
-
-    #         print("Entering expand_codes_local function")
-    #         print(f"filter_root_cui: {filter_root_cui}")
-
-    #     retrieved_codes_temp = []
-    #     retrieved_names_temp = []
-
-    #     cr = self.expand_codes_parents_local(filter_root_cui, debug=debug)
-
-    #     if debug:
-    #         print(f"cr: {len(cr)}")
-
-    #     ar = self.expand_codes_children_local(filter_root_cui, debug=debug)
-
-    #     if debug:
-    #         print(f"ar: {len(ar)}")
-
-    #     retrieved_codes_temp.extend(cr)
-    #     retrieved_codes_temp.extend(ar)
-    #     retrieved_names_temp.extend(self.get_pretty_name_list(cr))
-    #     retrieved_names_temp.extend(self.get_pretty_name_list(ar))
-    #     retrieved_codes_temp = list(set(retrieved_codes_temp))
-    #     retrieved_names_temp = list(set(retrieved_names_temp))
-
-    #     if debug:
-    #         print(
-    #             f"{len(retrieved_codes_temp)} retrieved_codes:"
-    #             f" {retrieved_codes_temp}"
-    #         )
-
-    #     return retrieved_codes_temp, retrieved_names_temp
-
     def expand_codes_local(
         self, filter_root_cui: Union[int, str], debug: bool = False
     ) -> Tuple[List[int], List[str]]:

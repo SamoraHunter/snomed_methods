@@ -9,20 +9,6 @@ to any medical term(s) using multiple search strategies:
 2. Hierarchy expansion - traversing parent-child relationships
 3. Optional MedCAT semantic similarity (if model available)
 
-Usage Example:
-    from semantic_expansion import SemanticSearch
-
-    # Initialize with your SNOMED data directory
-    searcher = SemanticSearch(uk_path="/path/to/snomed")
-
-    # Search for a term (returns comprehensive results)
-    search_results = searcher.search("meningioma", max_concepts=500)
-
-    # Get summary metrics and lists
-    print(search_results.metrics())
-    print(search_results.cuis)  # List of CUIs
-    print(search_results.terms)  # List of terms
-    print(search_results.concepts)  # Dict mapping CUI to term
 
 Search Parameters:
     - max_concepts: Controls hierarchy expansion breadth (default=100)

@@ -109,7 +109,6 @@ def get_subsumed_concepts_for_terms(
 
     Example:
         >>> result = get_subsumed_concepts_for_terms(["meningioma"], max_depth=3)
-        >>> print(f"Found {len(result['all_concepts'])} total concepts")
     """
     snomed = _get_snomed_reader()
 

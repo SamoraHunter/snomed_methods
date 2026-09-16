@@ -572,9 +572,6 @@ class SearchResult:
         self.term_matches: int = 0
         self.hierarchy_matches: int = 0
         self.embedding_matches: int = 0
-        self.term_matches: int = 0
-        self.hierarchy_matches: int = 0
-        self.embedding_matches: int = 0
 
     @property
     def cuis(self) -> List[str]:
