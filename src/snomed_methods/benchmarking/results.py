@@ -5,13 +5,14 @@ from pathlib import Path
 import pandas as pd
 
 try:
-    from .plots import plot_comparison
-
-    plt = None
+    from .plots import plot_comparison, plt
 except ImportError:
     try:
         import matplotlib.pyplot as plt
+
+        from .plots import plot_comparison
     except ImportError:
+        plot_comparison = None
         plt = None
 
 
