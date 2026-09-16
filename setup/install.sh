@@ -104,6 +104,12 @@ main() {
 (
     set -e
 
+if [ -f "$PROJECT_DIR/.env" ]; then
+    set -a
+    source "$PROJECT_DIR/.env"
+    set +a
+fi
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -187,17 +193,19 @@ extras=""
 if [ "$INSTALL_MODE" = "all" ]; then
     extras="all"
 fi
-if [ "$DEV_MODE" = true ]; then
+if [ "$DEV_MODE" = true ] && [ "$INSTALL_MODE" != "all" ]; then
     [ -n "$extras" ] && extras+=","
     extras+="dev,medcat,jupyter"
-else
-    [ -n "$extras" ] && extras+=","
-    extras+="jupyter"
+elif [ "$DEV_MODE" = false ] && [ -z "$extras" ]; then
+    extras="jupyter"
 fi
 
 INSTALL_TARGET="."
 [ -n "$extras" ] && INSTALL_TARGET=".[$extras]"
 
+echo "DEV_MODE=$DEV_MODE"
+echo "INSTALL_MODE=$INSTALL_MODE"
+echo "EXTRAS=$extras"
 echo "Running pip install -e \"$INSTALL_TARGET\""
 pip_install_args=("-e" "$INSTALL_TARGET")
 if [ "$PROXY_MODE" = true ]; then
@@ -205,6 +213,11 @@ if [ "$PROXY_MODE" = true ]; then
 fi
 
 pip install "${pip_install_args[@]}"
+
+if [ "$DEV_MODE" = true ]; then
+    echo "Installing pre-commit..."
+    pip install --upgrade pre-commit
+fi
 
 echo "Installing SpaCy model..."
 SPACY_MODEL_URL="https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.1/en_core_web_md-3.7.1-py3-none-any.whl"
@@ -217,7 +230,14 @@ else
     pip_spacy_args+=("$SPACY_MODEL_URL")
 fi
 
-pip install "${pip_spacy_args[@]}"
+    pip install "${pip_spacy_args[@]}"
+
+if [ "$DEV_MODE" = true ]; then
+    echo "Installing pre-commit hooks..."
+    git config --unset-all core.hooksPath 2>/dev/null || true
+    python -m pip install --quiet pre-commit
+    pre-commit install
+fi
 
 echo "Adding virtual environment to Jupyter kernelspec..."
 python -m ipykernel install --user --name="$VENV_NAME"

@@ -208,3 +208,4 @@ notebooks/benchmarks/benchmark_outputs/summary_statistics.csv
 embedding_models/
 embedding_models/SapBERT-from-PubMedBERT-fulltext
 embedding_models/SapBERT-from-PubMedBERT-fulltext
+snomed_methods_env*
