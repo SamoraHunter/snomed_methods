@@ -95,13 +95,9 @@ lint.select = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
-"notebooks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
-"snomed_methods_examples.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
-"notebooks/benchmarks/*.ipynb" = ["T201", "E402", "A004", "B007", "F821", "C901", "E501"]
-"test_*.py" = ["T201", "E501", "C901", "B007"]
+"notebooks/**/*.ipynb" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT"]
+"test_*.py" = ["E501"]
 "validate_notebooks.py" = ["C901", "T201"]
-"tests/notebook_runner.py" = ["T201", "E501"]
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
