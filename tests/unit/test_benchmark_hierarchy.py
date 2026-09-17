@@ -172,7 +172,7 @@ class TestHierarchyIntegration:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for name, data in datasets.items():
+        for _name, data in datasets.items():
             assert len(data) > 0
             assert "seed_cui" in data[0]
             assert "expected_related" in data[0]

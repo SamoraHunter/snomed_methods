@@ -155,7 +155,7 @@ class TestTermIntegration:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for name, data in datasets.items():
+        for _name, data in datasets.items():
             assert len(data) > 0
             assert "term" in data[0]
             assert "expected_cui" in data[0]

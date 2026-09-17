@@ -186,7 +186,7 @@ class TestLoadAnnotationDatasets:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for name, data in datasets.items():
+        for _name, data in datasets.items():
             assert len(data) > 0
             sample = data[0]
             assert "text" in sample

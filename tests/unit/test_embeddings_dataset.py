@@ -166,7 +166,7 @@ class TestLoadEmbeddingDatasets:
 
         datasets = load_embedding_datasets(cache_dir=str(tmp_path))
 
-        for size_name, data in datasets.items():
+        for _size_name, data in datasets.items():
             assert isinstance(data, list)
             if len(data) > 0:
                 sample = data[0]

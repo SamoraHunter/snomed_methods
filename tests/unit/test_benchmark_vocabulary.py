@@ -157,7 +157,7 @@ class TestVocabularyIntegration:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for name, data in datasets.items():
+        for _name, data in datasets.items():
             assert len(data) > 0
             assert "snomed_cui" in data[0]
             assert "target_codes" in data[0]

@@ -16,9 +16,5 @@ concepts = [438181000000108, 127579001, 409681000000102]
 
 for cui in concepts:
     info = lookup.getconcept_info(str(cui))
-    print(f"CUI: {cui}")
-    if info:
-        print(f"  Name: {info.get('preferred_name', 'N/A')}")
-        print(f"  Type: {info.get('type_id', 'N/A')}")
-    else:
-        print("  Not found")
+    if not info:
+        pass
