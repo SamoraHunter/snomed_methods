@@ -34,7 +34,9 @@ dependencies = [
     "requests>=2.31.0",
     "tqdm>=4.65.0",
     "matplotlib>=3.7.0",
-    "ipykernel"
+    "ipykernel",
+    "torch>=2.0.0",
+    "faiss-cpu>=1.8.0",
 ]
 
 [project.optional-dependencies]
@@ -137,6 +139,7 @@ lint.select = [
 "notebooks/**/*.ipynb" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT", "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN", "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF", "S", "SIM", "TC", "TCH", "TRY", "UP"]
 "notebooks/notebook_runner.py" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT", "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN", "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF", "S", "SIM", "TC", "TCH", "TRY", "UP"]
 "tests/**/*.py" = [
+    "C901",
     "S101",
     "PLC0415",
     "SLF001",
@@ -175,6 +178,8 @@ lint.select = [
     "S", "SIM", "TC", "TCH", "TRY", "UP", "CPY001"
 ]
 "src/**/*.py" = [
+    "C901",
+    "PLR0912",
     "PLC0415",
     "ANN201",
     "FBT001",
