@@ -1,5 +1,4 @@
-"""
-Recommended .env file structure:
+"""Recommended .env file structure:
 
 # .env
 # This file stores environment variables for local development.
@@ -15,6 +14,9 @@ GITEA_REPO_NAME="snomed_methods" # e.g., 'snomed_methods'
 REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt"
 """
 
+from __future__ import annotations
+
+import contextlib
 import json
 import os
 import shutil
@@ -35,7 +37,7 @@ load_dotenv()  # Load environment variables from .env file
 VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
 
 
-def _get_gitea_api_base(gitea_url):
+def _get_gitea_api_base(gitea_url) -> str:
     """Extracts the base API URL from a Gitea URL, stripping any repo paths."""
     parsed = urlparse(gitea_url)
     # This ensures we get scheme://host:port/api/v1 even if the user provided a repo URL
@@ -61,7 +63,13 @@ def run_command(command, check_output=False, suppress_output=False):
 
 
 def _api_request(
-    url, method, token, headers=None, data=None, json_data=None, files=None
+    url,
+    method,
+    token,
+    headers=None,
+    data=None,
+    json_data=None,
+    files=None,
 ):
     """Helper for making authenticated API requests."""
     _headers = {"Authorization": f"token {token}"}
@@ -71,7 +79,10 @@ def _api_request(
     try:
         if method == "GET":
             response = requests.get(
-                url, headers=_headers, timeout=30, verify=VERIFY_SSL
+                url,
+                headers=_headers,
+                timeout=30,
+                verify=VERIFY_SSL,
             )
         elif method == "POST":
             response = requests.post(
@@ -84,15 +95,14 @@ def _api_request(
                 verify=VERIFY_SSL,
             )
         else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
+            msg = f"Unsupported HTTP method: {method}"
+            raise ValueError(msg)
 
         response.raise_for_status()  # Raise an exception for HTTP errors
         return response
     except requests.exceptions.RequestException as e:
         if hasattr(e, "response") and e.response is not None:
-            try:
-                pass
-            except json.JSONDecodeError:
+            with contextlib.suppress(json.JSONDecodeError):
                 pass
         sys.exit(1)
 
@@ -113,7 +123,15 @@ def get_gitea_releases_data(gitea_url, owner, repo, token):
 
 
 def create_gitea_release(
-    gitea_url, owner, repo, token, tag_name, name, body, draft, prerelease
+    gitea_url,
+    owner,
+    repo,
+    token,
+    tag_name,
+    name,
+    body,
+    draft,
+    prerelease,
 ):
     """Creates a new release on Gitea."""
     api_base = _get_gitea_api_base(gitea_url)
@@ -139,7 +157,7 @@ def create_gitea_release(
     return data
 
 
-def download_github_asset(asset_url, gh_token, output_path):
+def download_github_asset(asset_url, gh_token, output_path) -> bool | None:
     """Downloads a release asset from GitHub."""
     headers = {
         "Authorization": f"token {gh_token}",
@@ -147,19 +165,29 @@ def download_github_asset(asset_url, gh_token, output_path):
     }
     try:
         response = requests.get(
-            asset_url, headers=headers, stream=True, timeout=120, verify=VERIFY_SSL
+            asset_url,
+            headers=headers,
+            stream=True,
+            timeout=120,
+            verify=VERIFY_SSL,
         )
         response.raise_for_status()
         with open(output_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+            f.writelines(response.iter_content(chunk_size=8192))
         return True
     except requests.exceptions.RequestException:
         return False
 
 
 def upload_gitea_release_asset(
-    gitea_url, owner, repo, release_id, token, asset_name, file_path, content_type
+    gitea_url,
+    owner,
+    repo,
+    release_id,
+    token,
+    asset_name,
+    file_path,
+    content_type,
 ):
     """Uploads an asset to a Gitea release."""
     api_base = _get_gitea_api_base(gitea_url)
@@ -187,23 +215,26 @@ def sync_releases_to_gitea(
     gitea_token,
     github_remote_name="origin",
     gitea_remote_name="gitea",
-):
-    """
-    Synchronizes Git tags and GitHub releases (including assets) to Gitea.
-    """
+) -> None:
+    """Synchronizes Git tags and GitHub releases (including assets) to Gitea."""
     run_command(["git", "fetch", github_remote_name, "--tags"])
     # Use --force to ensure the Gitea mirror tags are perfectly in sync with the source
     run_command(["git", "push", gitea_remote_name, "--tags", "--force"])
 
     # 1. Get GitHub releases
     github_releases = get_github_releases_data(
-        github_repo_owner, github_repo_name, github_token
+        github_repo_owner,
+        github_repo_name,
+        github_token,
     )
     github_releases_by_tag = {r["tag_name"]: r for r in github_releases}
 
     # 2. Get Gitea releases
     gitea_releases = get_gitea_releases_data(
-        gitea_url, gitea_repo_owner, gitea_repo_name, gitea_token
+        gitea_url,
+        gitea_repo_owner,
+        gitea_repo_name,
+        gitea_token,
     )
     gitea_releases_by_tag = {r["tag_name"]: r for r in gitea_releases}
 
@@ -280,7 +311,8 @@ if __name__ == "__main__":
     GITEA_REPO_OWNER = os.getenv("GITEA_REPO_OWNER")
     GITEA_REPO_NAME = os.getenv("GITEA_REPO_NAME")
     GITHUB_REMOTE_NAME = os.getenv(
-        "GITHUB_REMOTE_NAME", "origin"
+        "GITHUB_REMOTE_NAME",
+        "origin",
     )  # Default to 'origin'
     GITEA_REMOTE_NAME = os.getenv("GITEA_REMOTE_NAME", "gitea")  # Default to 'gitea'
 

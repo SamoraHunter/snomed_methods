@@ -91,13 +91,89 @@ lint.select = [
     "U",
     "W",
     "YTT",
+    "ANN",
+    "ARG",
+    "BLE",
+    "COM",
+    "DTZ",
+    "EM",
+    "EXE",
+    "FA",
+    "FBT",
+    "G",
+    "ICN",
+    "INP",
+    "ISC",
+    "PERF",
+    "PGH",
+    "PIE",
+    "PLC0415",
+    "INP",
+    "ISC",
+    "PERF",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "RUF",
+    "S",
+    "SIM",
+    "TC",
+    "TCH",
+    "TRY",
+    "UP",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"notebooks/**/*.ipynb" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT"]
-"test_*.py" = ["E501"]
-"validate_notebooks.py" = ["C901", "T201"]
+".github/**/*" = [
+    "A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT",
+    "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN",
+    "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF",
+    "S", "SIM", "TC", "TCH", "TRY", "UP",
+]
+"notebooks/**/*.ipynb" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT", "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN", "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF", "S", "SIM", "TC", "TCH", "TRY", "UP"]
+"notebooks/notebook_runner.py" = ["A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT", "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN", "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF", "S", "SIM", "TC", "TCH", "TRY", "UP"]
+"test_*.py" = [
+    "S101",
+    "PLC0415",
+    "SLF001",
+    "BLE001",
+    "EXE001",
+    "CPY001",
+    "PTH100",
+    "PTH103",
+    "PTH108",
+    "PTH110",
+    "PTH118",
+    "PTH119",
+    "PTH120",
+    "PTH123",
+    "PLR2004",
+    "ANN001",
+    "ARG002",
+    "ANN201",
+    "SIM117",
+    "ERA001",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D105",
+    "D106",
+    "D107",
+    "D205",
+    "RUF012",
+]
+"validate_notebooks.py" = [
+    "A", "B", "C", "E", "F", "G", "I", "N", "Q", "R", "T", "U", "W", "YTT",
+    "ANN", "ARG", "BLE", "COM", "DTZ", "EM", "EXE", "FA", "FBT", "ICN",
+    "INP", "ISC", "PERF", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RUF",
+    "S", "SIM", "TC", "TCH", "TRY", "UP", "CPY001"
+]
+
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true

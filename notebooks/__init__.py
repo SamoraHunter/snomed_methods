@@ -1,3 +1,1 @@
-"""
-SNOMED Methods package notebooks.
-"""
+"""SNOMED Methods package notebooks."""

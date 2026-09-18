@@ -1,3 +1,1 @@
-"""
-Setup module for snomed_methods installer.
-"""
+"""Setup module for snomed_methods installer."""

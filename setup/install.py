@@ -1,6 +1,5 @@
 # setup/install.py
-"""
-Python-based installer for snomed_methods.
+"""Python-based installer for snomed_methods.
 
 This module provides a cross-platform installation script that creates virtual
 environments, installs dependencies, and registers the environment as a Jupyter
@@ -18,15 +17,19 @@ Examples:
     python setup/install.py
     python setup/install.py snomed_env
     python setup/install.py snomed_env dev
+
 """
+
+from __future__ import annotations
 
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+
+_MIN_ARGS = 2
 
 
-def run_command(cmd: str, cwd: Optional[str | Path] = None) -> str:
+def run_command(cmd: str, cwd: str | Path | None = None) -> str:
     """Run a shell command and return the standard output.
 
     Args:
@@ -43,9 +46,14 @@ def run_command(cmd: str, cwd: Optional[str | Path] = None) -> str:
     Note:
         The function uses `subprocess.run` with `check=True`, so any command failure
         will raise an exception.
+
     """
-    result = subprocess.run(
-        cmd, shell=True, cwd=cwd, capture_output=True, text=True, check=True
+    result = subprocess.run(  # noqa: S603
+        cmd.split(),
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return result.stdout
 
@@ -55,6 +63,7 @@ def get_python_executable() -> str:
 
     Returns:
         The absolute path to the current Python executable as a string.
+
     """
     return sys.executable
 
@@ -73,6 +82,7 @@ def create_venv(venv_path: str | Path) -> bool:
     Note:
         This function creates a new virtual environment using the current Python
         executable. It does not handle activation of the environment.
+
     """
     venv_path = Path(venv_path).resolve()
 
@@ -80,11 +90,12 @@ def create_venv(venv_path: str | Path) -> bool:
         return True
 
     python_executable = get_python_executable()
-    subprocess.run(
+    subprocess.run(  # noqa: S603
         [python_executable, "-m", "venv", str(venv_path)],
         capture_output=True,
         text=True,
         check=True,
+        shell=False,
     )
     return True
 
@@ -103,6 +114,7 @@ def get_activate_script(venv_path: str | Path) -> Path:
     Note:
         This function determines the correct activation script based on
         sys.platform and does not verify if the file exists.
+
     """
     venv_path = Path(venv_path).resolve()
 
@@ -123,6 +135,7 @@ def install_dependencies(venv_path: str | Path, mode: str = "production") -> Non
     Note:
         This function upgrades pip, setuptools, and wheel before installing the
         package. In dev mode, it installs with Extras [dev,medcat].
+
     """
     venv_path = Path(venv_path).resolve()
 
@@ -134,27 +147,30 @@ def install_dependencies(venv_path: str | Path, mode: str = "production") -> Non
         python_cmd = str(venv_path / "bin" / "python")
 
     # Upgrade base packages
-    subprocess.run(
+    subprocess.run(  # noqa: S603
         [python_cmd, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
         capture_output=True,
         text=True,
         check=True,
+        shell=False,
     )
 
     # Install package
     if mode == "dev":
-        subprocess.run(
+        subprocess.run(  # noqa: S603
             [python_cmd, "-m", "pip", "install", "-e", ".[dev,medcat]"],
             capture_output=True,
             text=True,
             check=True,
+            shell=False,
         )
     else:
-        subprocess.run(
+        subprocess.run(  # noqa: S603
             [python_cmd, "-m", "pip", "install", "-e", "."],
             capture_output=True,
             text=True,
             check=True,
+            shell=False,
         )
 
 
@@ -173,18 +189,21 @@ def register_kernel(venv_name: str) -> str:
         This function installs jupyter if not already present and registers
         the kernel using the current Python executable's ipykernel module.
         The registered kernel will have the display name "Python (venv_name)".
+
     """
     python_executable = get_python_executable()
 
     # Install jupyter if not already installed
-    subprocess.run(
+    subprocess.run(  # noqa: S603
         [python_executable, "-m", "pip", "install", "--quiet", "jupyter"],
         capture_output=True,
         text=True,
+        check=False,
+        shell=False,
     )
 
     # Register the kernel
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [
             python_executable,
             "-m",
@@ -199,6 +218,7 @@ def register_kernel(venv_name: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        shell=False,
     )
 
     return result.stdout
@@ -214,19 +234,21 @@ def list_kernels() -> str:
     Note:
         This function catches CalledProcessError and returns an error message
         instead of raising an exception, making it safe for informational purposes.
+
     """
     python_executable = get_python_executable()
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             [python_executable, "-m", "jupyter", "kernelspec", "list"],
             capture_output=True,
             text=True,
             check=True,
+            shell=False,
         )
-        return result.stdout
     except subprocess.CalledProcessError:
         return "Failed to list kernels"
+    return result.stdout
 
 
 def main() -> None:
@@ -247,10 +269,15 @@ def main() -> None:
     Note:
         The function does not return any value. It handles all subprocess
         calls internally and will raise exceptions if critical operations fail.
+
     """
     # Parse arguments
-    venv_name = sys.argv[1] if len(sys.argv) > 1 else "snomed_methods_env"
-    mode = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] == "dev" else "production"
+    venv_name = sys.argv[1] if len(sys.argv) > _MIN_ARGS - 1 else "snomed_methods_env"
+    mode = (
+        sys.argv[_MIN_ARGS - 1]
+        if len(sys.argv) > _MIN_ARGS - 1 and sys.argv[_MIN_ARGS - 1] == "dev"
+        else "production"
+    )
 
     # Get paths
     script_dir = Path(__file__).parent.parent.resolve()
