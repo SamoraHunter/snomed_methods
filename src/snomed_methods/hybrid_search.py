@@ -624,6 +624,7 @@ def expand_concepts(
     uk_path: str | None = None,
     medcat_path: str | None = None,
     model_path: str | None = None,
+    max_concepts: int = 100,
     top_k: int = 20,
     term_weight: float = 0.3,
     hierarchy_weight: float = 0.2,

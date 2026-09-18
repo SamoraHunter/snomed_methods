@@ -710,7 +710,7 @@ class SnomedRelations:
                 ([], [])
                 if not use_medcat
                 else self.get_medcat_cdb_most_similar(
-                    filter_root_cui=filter_root_cui,
+                    filter_root_cui,
                     context_type=context_type,
                     type_id_filter=type_id_filter,
                     topn=topn,
