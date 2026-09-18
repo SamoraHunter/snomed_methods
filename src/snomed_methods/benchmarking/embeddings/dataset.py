@@ -64,13 +64,31 @@ def generate_embedding_dataset(
         snomed_concepts = [str(100000 + i) for i in range(num_samples)]
 
     # Group related concepts by semantic category (disease groups)
-    disease_groups = [
-        ["73211009", "237550006", "237600004"],  # Diabetes-related
-        ["38341003", "59621000"],  # Hypertension-related
-        ["37796005"],  # Migraine (single concept)
-        ["233604007"],  # Pneumonia (single concept)
-        ["195967001"],  # Asthma (single concept)
-    ]
+    disease_groups: list[list[str]] = []
+
+    # First, add any concepts that aren't in the default disease groups
+    default_disease_concepts = {
+        "73211009",
+        "237550006",
+        "237600004",
+        "38341003",
+        "59621000",
+    }
+
+    # Identify concepts not in default disease groups
+    disease_groups.extend(
+        [concept]
+        for concept in snomed_concepts
+        if concept not in default_disease_concepts
+    )
+
+    # Add default disease groups (for real SNOMED concepts)
+    disease_groups.extend(
+        [
+            ["73211009", "237550006", "237600004"],  # Diabetes-related
+            ["38341003", "59621000"],  # Hypertension-related
+        ],
+    )
 
     results = []
     group_pairs: list[tuple[str, str, bool]] = []
@@ -89,16 +107,41 @@ def generate_embedding_dataset(
     dissimilar_count = num_samples - len(group_pairs)
     if dissimilar_count > 0:
         all_concepts = [c for group in disease_groups for c in group]
+
+        # If we can't generate enough unique dissimilar pairs, add synthetic concepts
+        max_unique_pairs = len(all_concepts) * (len(all_concepts) - 1) // 2
+        if max_unique_pairs < num_samples:
+            additional_needed = num_samples - max_unique_pairs
+            start_id = 100000 + len(snomed_concepts)
+            synthetic_concepts = [str(start_id + i) for i in range(additional_needed)]
+            all_concepts.extend(synthetic_concepts)
+
+            # Add single-concept groups for synthetic concepts
+            disease_groups.extend([syn_cui] for syn_cui in synthetic_concepts)
+
         attempted = 0
+        seen_pairs: set[tuple[str, str]] = set()
         while (
             len(group_pairs) < num_samples
             and attempted < dissimilar_count * MIN_GROUP_SIZE
         ):
             c1, c2 = random.sample(all_concepts, 2)
+
+            pair_key = tuple(sorted([c1, c2]))
+            if pair_key in seen_pairs:
+                attempted += 1
+                continue
+
             c1_group = next((g for g in disease_groups if c1 in g), None)
             c2_group = next((g for g in disease_groups if c2 in g), None)
-            if c1_group != c2_group and (c1, c2, False) not in group_pairs:
-                group_pairs.append((c1, c2, False))
+
+            is_same_group = (c1_group is not None) and (c1_group == c2_group)
+            if is_same_group:
+                attempted += 1
+                continue
+
+            seen_pairs.add(pair_key)
+            group_pairs.append((c1, c2, False))
             attempted += 1
 
     # Create result samples
