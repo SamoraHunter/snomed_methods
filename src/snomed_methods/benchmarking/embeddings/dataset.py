@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Dataset generation and loading for embedding semantic similarity benchmarking."""
 
+from __future__ import annotations
+
+import pathlib
 import random
-from typing import List, Optional
+from pathlib import Path
 
 try:
     from datasets import DatasetDict
@@ -13,10 +16,20 @@ except ImportError:
         pass
 
 
-def generate_embedding_dataset(  # noqa: C901
+MIN_GROUP_SIZE = 2
+SIMILARITY_THRESHOLD = 500
+SMALL_SIZE = 25
+MEDIUM_SIZE = 100
+LARGE_SIZE = 500
+
+CACHE_DIR = Path(__file__).parent.parent / "cache"
+EMBEDDING_CACHE_DIR = CACHE_DIR / "embedding_datasets"
+
+
+def generate_embedding_dataset(
     num_samples: int = 100,
-    snomed_concepts: Optional[List[str]] = None,
-) -> List[dict]:
+    snomed_concepts: list[str] | None = None,
+) -> list[dict]:
     """Generate synthetic embedding dataset for semantic similarity benchmarking.
 
     Creates concept pairs with known relationships (similar/dissimilar) to evaluate
@@ -30,6 +43,7 @@ def generate_embedding_dataset(  # noqa: C901
     Returns:
         List of dicts with keys: 'concept_1', 'concept_2', 'is_similar',
         'similarity_label'
+
     """
     if snomed_concepts is None:
         # Use real SNOMED CT concepts for benchmarking
@@ -46,7 +60,7 @@ def generate_embedding_dataset(  # noqa: C901
             "34825004",  # Arthritis
         ]
 
-    if len(snomed_concepts) < 2:
+    if len(snomed_concepts) < MIN_GROUP_SIZE:
         snomed_concepts = [str(100000 + i) for i in range(num_samples)]
 
     # Group related concepts by semantic category (disease groups)
@@ -59,21 +73,27 @@ def generate_embedding_dataset(  # noqa: C901
     ]
 
     results = []
-    group_pairs = []
+    group_pairs: list[tuple[str, str, bool]] = []
 
     # Generate similar pairs (same disease group)
     for group in disease_groups:
-        if len(group) >= 2:
-            for i in range(len(group)):
-                for j in range(i + 1, min(len(group), i + 3)):
-                    group_pairs.append((group[i], group[j], True))
+        if len(group) >= MIN_GROUP_SIZE:
+            pairs = [
+                (group[i], group[j], True)
+                for i in range(len(group))
+                for j in range(i + 1, min(len(group), i + 3))
+            ]
+            group_pairs.extend(pairs)
 
     # Generate dissimilar pairs (different disease groups)
     dissimilar_count = num_samples - len(group_pairs)
     if dissimilar_count > 0:
         all_concepts = [c for group in disease_groups for c in group]
         attempted = 0
-        while len(group_pairs) < num_samples and attempted < dissimilar_count * 10:
+        while (
+            len(group_pairs) < num_samples
+            and attempted < dissimilar_count * MIN_GROUP_SIZE
+        ):
             c1, c2 = random.sample(all_concepts, 2)
             c1_group = next((g for g in disease_groups if c1 in g), None)
             c2_group = next((g for g in disease_groups if c2 in g), None)
@@ -85,10 +105,7 @@ def generate_embedding_dataset(  # noqa: C901
     for i in range(min(num_samples, len(group_pairs))):
         concept_1, concept_2, is_similar = group_pairs[i]
 
-        if is_similar:
-            similarity_label = "high"
-        else:
-            similarity_label = "low"
+        similarity_label = "high" if is_similar else "low"
 
         results.append(
             {
@@ -96,13 +113,13 @@ def generate_embedding_dataset(  # noqa: C901
                 "concept_2": concept_2,
                 "is_similar": is_similar,
                 "similarity_label": similarity_label,
-            }
+            },
         )
 
     return results
 
 
-def load_embedding_datasets(cache_dir: Optional[str] = None) -> dict:
+def load_embedding_datasets(cache_dir: str | None = None) -> dict:
     """Load pre-generated embedding datasets or generate new ones.
 
     Args:
@@ -110,24 +127,21 @@ def load_embedding_datasets(cache_dir: Optional[str] = None) -> dict:
 
     Returns:
         Dict with dataset names as keys and lists of samples
+
     """
-    import os
-
     if cache_dir is None:
-        cache_dir = os.path.join(
-            os.path.dirname(__file__), "..", "cache", "embedding_datasets"
-        )
+        cache_dir = EMBEDDING_CACHE_DIR
 
-    os.makedirs(cache_dir, exist_ok=True)
+    pathlib.Path(cache_dir).mkdir(exist_ok=True, parents=True)
 
     return {
-        "small": generate_embedding_dataset(num_samples=25),
-        "medium": generate_embedding_dataset(num_samples=100),
-        "large": generate_embedding_dataset(num_samples=500),
+        "small": generate_embedding_dataset(num_samples=SMALL_SIZE),
+        "medium": generate_embedding_dataset(num_samples=MEDIUM_SIZE),
+        "large": generate_embedding_dataset(num_samples=LARGE_SIZE),
     }
 
 
-def create_pairs_from_umnsrs(umnsrs_pairs: List[dict]) -> List[dict]:
+def create_pairs_from_umnsrs(umnsrs_pairs: list[dict]) -> list[dict]:
     """Convert UMNSRS pairs to embedding benchmark format.
 
     Args:
@@ -135,11 +149,12 @@ def create_pairs_from_umnsrs(umnsrs_pairs: List[dict]) -> List[dict]:
 
     Returns:
         List of dicts with concept pair info
+
     """
     results = []
     for pair in umnsrs_pairs:
-        label = float(pair.get("label", 500))
-        is_similar = label >= 500  # Threshold for similarity
+        label = float(pair.get("label", SIMILARITY_THRESHOLD))
+        is_similar = label >= SIMILARITY_THRESHOLD
 
         results.append(
             {
@@ -148,7 +163,7 @@ def create_pairs_from_umnsrs(umnsrs_pairs: List[dict]) -> List[dict]:
                 "is_similar": is_similar,
                 "similarity_label": "high" if is_similar else "low",
                 "umnsrs_score": label,
-            }
+            },
         )
 
     return results

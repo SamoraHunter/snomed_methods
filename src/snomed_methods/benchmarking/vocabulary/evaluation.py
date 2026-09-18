@@ -2,14 +2,22 @@
 # SPDX-License-Identifier: MIT
 """Evaluation metrics for vocabulary mapping benchmarking."""
 
-from typing import Any, List, Set
+from __future__ import annotations
+
+from typing import Protocol
 
 import numpy as np
 
 
+class MapperFunc(Protocol):
+    """Type protocol for mapper functions."""
+
+    def __call__(self, snomed_cui: str) -> list[str] | object: ...
+
+
 def precision_at_k(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
     k: int = 10,
 ) -> float:
     """Compute Precision@K for vocabulary mapping.
@@ -21,6 +29,7 @@ def precision_at_k(
 
     Returns:
         Precision at K (fraction of top-K that are relevant)
+
     """
     top_k = predicted_codes[:k]
     if not top_k:
@@ -30,8 +39,8 @@ def precision_at_k(
 
 
 def recall_at_k(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
     k: int = 10,
 ) -> float:
     """Compute Recall@K for vocabulary mapping.
@@ -43,6 +52,7 @@ def recall_at_k(
 
     Returns:
         Recall at K (fraction of expected codes found in top-K)
+
     """
     top_k = set(predicted_codes[:k])
     relevant_found = len(top_k & expected_codes)
@@ -50,8 +60,8 @@ def recall_at_k(
 
 
 def coverage_rate(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
 ) -> float:
     """Compute Coverage Rate across all predictions.
 
@@ -61,6 +71,7 @@ def coverage_rate(
 
     Returns:
         Fraction of expected codes covered by any prediction position
+
     """
     if not expected_codes:
         return 0.0
@@ -70,8 +81,8 @@ def coverage_rate(
 
 
 def exact_match_rate(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
 ) -> float:
     """Compute Exact Match Rate.
 
@@ -81,13 +92,14 @@ def exact_match_rate(
 
     Returns:
         1.0 if prediction set matches expected exactly, else 0.0
+
     """
     return 1.0 if set(predicted_codes) == expected_codes else 0.0
 
 
 def f1_at_k(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
     k: int = 10,
 ) -> float:
     """Compute F1@K for vocabulary mapping.
@@ -99,6 +111,7 @@ def f1_at_k(
 
     Returns:
         F1 score at K
+
     """
     p = precision_at_k(predicted_codes, expected_codes, k)
     r = recall_at_k(predicted_codes, expected_codes, k)
@@ -108,8 +121,8 @@ def f1_at_k(
 
 
 def mean_reciprocal_rank(
-    predicted_codes: List[str],
-    expected_codes: Set[str],
+    predicted_codes: list[str],
+    expected_codes: set[str],
 ) -> float:
     """Compute Mean Reciprocal Rank (MRR).
 
@@ -119,6 +132,7 @@ def mean_reciprocal_rank(
 
     Returns:
         Reciprocal rank of first relevant code found
+
     """
     for i, code in enumerate(predicted_codes):
         if code in expected_codes:
@@ -127,9 +141,9 @@ def mean_reciprocal_rank(
 
 
 def evaluate_mapper(
-    mapper_func: Any,
-    dataset: List[dict],
-    k_values: List[int] | None = None,
+    mapper_func: MapperFunc,
+    dataset: list[dict],
+    k_values: list[int] | None = None,
 ) -> dict:
     """Evaluate a vocabulary mapper on benchmark dataset.
 
@@ -146,6 +160,7 @@ def evaluate_mapper(
         ...     return ["ICD_E11.9", "LOINC_4544-3"]
         >>> dataset = generate_mapping_dataset(10)
         >>> results = evaluate_mapper(my_mapper, dataset)
+
     """
     if k_values is None:
         k_values = [1, 3, 5, 10]
@@ -168,7 +183,7 @@ def evaluate_mapper(
             try:
                 codes_list = getattr(prediction_result, "target_code", [])
                 predicted_codes = list(codes_list)
-            except Exception:
+            except (KeyError, TypeError, AttributeError):
                 continue
 
         for k in k_values:

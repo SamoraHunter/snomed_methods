@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 SNOMED Methods Contributors
 # SPDX-License-Identifier: MIT
-"""
-Example usage of SnomedTermLookup for finding SNOMED CT codes by term.
+"""Example usage of SnomedTermLookup for finding SNOMED CT codes by term.
 
 This script demonstrates various ways to search for SNOMED concepts using
 the SnomedTermLookup class. It includes examples for basic searching,
@@ -19,8 +18,15 @@ Set environment variables to customize behavior:
 The script runs all examples sequentially and logs output at INFO level.
 """
 
+import contextlib
 import logging
 import os
+import pathlib
+
+try:
+    from medcat.cat import CAT
+except ImportError:
+    CAT = None
 
 from snomed_term_lookup import create_term_lookup_from_directory
 
@@ -29,11 +35,11 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def example_basic_search() -> None:
     """Demonstrate basic term search with prefix matching."""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    default_dir = str(
+        project_root
+        / "uk_sct2cl_42.2.0"
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
     )
     sct2_dir = os.environ.get("SNOMED_DIR", default_dir)
 
@@ -47,11 +53,11 @@ def example_basic_search() -> None:
 
 def example_case_insensitive() -> None:
     """Demonstrate case-insensitive search functionality."""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    default_dir = str(
+        project_root
+        / "uk_sct2cl_42.2.0"
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
     )
     sct2_dir = os.environ.get("SNOMED_DIR", default_dir)
 
@@ -62,29 +68,27 @@ def example_case_insensitive() -> None:
 
 def example_fuzzy_search() -> None:
     """Demonstrate fuzzy string matching for typo-tolerant searches."""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    default_dir = str(
+        project_root
+        / "uk_sct2cl_42.2.0"
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
     )
     sct2_dir = os.environ.get("SNOMED_DIR", default_dir)
 
     lookup = create_term_lookup_from_directory(sct2_dir)
 
-    try:
+    with contextlib.suppress(ImportError):
         lookup.find_concepts_by_term_fuzzy("menignoma", min_score=70, top_n=5)
-    except ImportError:
-        pass
 
 
 def example_batch_search() -> None:
     """Demonstrate batch searching for multiple terms at once."""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    default_dir = str(
+        project_root
+        / "uk_sct2cl_42.2.0"
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
     )
     sct2_dir = os.environ.get("SNOMED_DIR", default_dir)
 
@@ -97,11 +101,11 @@ def example_batch_search() -> None:
 
 def example_concept_info() -> None:
     """Demonstrate how to retrieve detailed information about a specific concept."""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    default_dir = os.path.join(
-        project_root,
-        "uk_sct2cl_42.2.0",
-        "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    default_dir = str(
+        project_root
+        / "uk_sct2cl_42.2.0"
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
     )
     sct2_dir = os.environ.get("SNOMED_DIR", default_dir)
 
@@ -117,9 +121,10 @@ def example_concept_info() -> None:
 
 def example_with_medcat() -> None:
     """Demonstrate enhanced search capabilities using MedCAT integration."""
-    try:
-        from medcat.cat import CAT
+    if CAT is None:
+        return
 
+    try:
         medcat_path = os.environ.get("MEDCAT_MODEL_PATH", None)
 
         if not medcat_path:

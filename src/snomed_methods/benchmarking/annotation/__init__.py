@@ -12,11 +12,11 @@ from .evaluation import (
 )
 
 __all__ = [
+    "evaluate_annotator",
+    "f1_at_k",
     "generate_annotation_dataset",
     "load_annotation_datasets",
-    "evaluate_annotator",
+    "mean_reciprocal_rank",
     "precision_at_k",
     "recall_at_k",
-    "f1_at_k",
-    "mean_reciprocal_rank",
 ]

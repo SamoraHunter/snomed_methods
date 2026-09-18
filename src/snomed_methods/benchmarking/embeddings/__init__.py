@@ -16,12 +16,12 @@ from .evaluation import (
 )
 
 __all__ = [
+    "accuracy_at_threshold",
+    "auc_pr",
+    "correlation_similarity",
+    "evaluate_embedding_similarity",
     "generate_embedding_dataset",
     "load_embedding_datasets",
-    "evaluate_embedding_similarity",
-    "accuracy_at_threshold",
-    "precision_recall_f1",
-    "auc_pr",
     "mean_squared_error_similarity",
-    "correlation_similarity",
+    "precision_recall_f1",
 ]

@@ -4,14 +4,14 @@
 import pytest
 
 
-def test_pipeline_import():
+def test_pipeline_import() -> None:
     from snomed_methods import ProgressiveExpansionPipeline, expand_progressive
 
     assert ProgressiveExpansionPipeline is not None
     assert expand_progressive is not None
 
 
-def test_stage_executors_exist():
+def test_stage_executors_exist() -> None:
     from snomed_methods.progressive_expansion import (
         StageExecutor,
         TermMatchingStage,
@@ -21,7 +21,7 @@ def test_stage_executors_exist():
     assert issubclass(TermMatchingStage, StageExecutor)
 
 
-def test_expansion_result():
+def test_expansion_result() -> None:
     from snomed_methods.progressive_expansion import ExpansionResult
 
     result = ExpansionResult(
@@ -34,7 +34,7 @@ def test_expansion_result():
     assert result.total_concepts == 2
 
 
-def test_stage_weights():
+def test_stage_weights() -> None:
     from snomed_methods.progressive_expansion import (
         HierarchyExpansionStage,
         TermMatchingStage,
@@ -44,7 +44,7 @@ def test_stage_weights():
     assert HierarchyExpansionStage().get_weight() == 0.3
 
 
-def test_pipeline_with_minimal_data():
+def test_pipeline_with_minimal_data() -> None:
     from snomed_methods.progressive_expansion import (
         ProgressiveExpansionPipeline,
     )

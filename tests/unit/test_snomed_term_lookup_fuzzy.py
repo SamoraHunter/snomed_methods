@@ -66,7 +66,7 @@ class TestSnomedTermLookupFuzzy:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test basic fuzzy matching (or fallback to exact)."""
         desc_file = os.path.join(
             temp_description_file,
@@ -92,7 +92,7 @@ class TestSnomedTermLookupFuzzy:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fuzzy matching with low minimum score."""
         desc_file = os.path.join(
             temp_description_file,
@@ -110,7 +110,7 @@ class TestSnomedTermLookupFuzzy:
     def test_find_concepts_by_term_fuzzy_empty_database(
         self,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fuzzy matching with empty database."""
         desc_file = os.path.join(
             temp_description_file,
@@ -131,7 +131,7 @@ class TestSnomedTermLookupFuzzy:
                 "typeId",
                 "term",
                 "caseSignificanceId",
-            ]
+            ],
         )
         df.to_csv(desc_file, sep="\t", index=False)
 
@@ -146,7 +146,7 @@ class TestSnomedTermLookupFuzzy:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fallback to exact matching when rapidfuzz unavailable."""
         desc_file = os.path.join(
             temp_description_file,
@@ -165,7 +165,7 @@ class TestSnomedTermLookupFuzzy:
 class TestSnomedTermLookupBatch:
     """Tests for batch search functionality edge cases."""
 
-    def test_find_concepts_batch_empty_list(self):
+    def test_find_concepts_batch_empty_list(self) -> None:
         """Test batch search with empty term list."""
         lookup = SnomedTermLookup()
 
@@ -177,7 +177,7 @@ class TestSnomedTermLookupBatch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test batch search when no terms match."""
         desc_file = os.path.join(
             temp_description_file,
@@ -196,7 +196,7 @@ class TestSnomedTermLookupBatch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test batch search with multiple matches."""
         desc_file = os.path.join(
             temp_description_file,
@@ -219,7 +219,7 @@ class TestSnomedTermLookupBatch:
 class TestSnomedTermLookupEdgeCases:
     """Tests for edge cases in SnomedTermLookup."""
 
-    def test_load_descriptions_duplicate_filenames(self):
+    def test_load_descriptions_duplicate_filenames(self) -> None:
         """Test loading from file with special characters."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create file with spaces and special chars
@@ -235,7 +235,7 @@ class TestSnomedTermLookupEdgeCases:
                     "typeId": [900000000000003001],
                     "term": ["Test Term"],
                     "caseSignificanceId": ["900000000000020000"],
-                }
+                },
             )
             df.to_csv(desc_file, sep="\t", index=False)
 
@@ -243,7 +243,7 @@ class TestSnomedTermLookupEdgeCases:
             assert lookup.df is not None
             assert len(lookup.df) == 1
 
-    def test_getconcept_info_empty_dataframe(self):
+    def test_getconcept_info_empty_dataframe(self) -> None:
         """Test getconcept_info when no data loaded."""
         lookup = SnomedTermLookup()
 
@@ -251,7 +251,7 @@ class TestSnomedTermLookupEdgeCases:
 
         assert result is None
 
-    def test_find_concepts_by_term_nan_terms(self):
+    def test_find_concepts_by_term_nan_terms(self) -> None:
         """Test that NaN terms in dataframe are handled correctly."""
         df = pd.DataFrame(
             {
@@ -264,7 +264,7 @@ class TestSnomedTermLookupEdgeCases:
                 "typeId": [900000000000003001] * 2,
                 "term": ["Valid Term", None],
                 "caseSignificanceId": ["900000000000020000"] * 2,
-            }
+            },
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -287,7 +287,7 @@ class TestSnomedTermLookupEdgeCases:
             assert len(results) == 1
             assert results[0][1] == "Valid Term"
 
-    def test_find_concepts_by_term_unicode_terms(self):
+    def test_find_concepts_by_term_unicode_terms(self) -> None:
         """Test term matching with unicode characters."""
         df = pd.DataFrame(
             {
@@ -300,7 +300,7 @@ class TestSnomedTermLookupEdgeCases:
                 "typeId": [900000000000003001],
                 "term": ["Café résumé naïve"],
                 "caseSignificanceId": ["900000000000020000"],
-            }
+            },
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -5,6 +5,8 @@ This script executes each notebook and verifies it runs successfully.
 It uses temp directory for each execution to avoid polluting the source dir.
 """
 
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
@@ -12,14 +14,14 @@ from pathlib import Path
 
 
 def test_notebook(notebook_path: str) -> tuple[bool, list[str]]:
-    """
-    Test a notebook by executing it in a temp directory.
+    """Test a notebook by executing it in a temp directory.
 
     Args:
         notebook_path: Path to the notebook file
 
     Returns:
         Tuple of (success: bool, errors: list of error messages)
+
     """
     notebook = Path(notebook_path)
     if not notebook.exists():
@@ -36,7 +38,7 @@ def test_notebook(notebook_path: str) -> tuple[bool, list[str]]:
     # Skip if Python venv doesn't exist (dev container setup issue)
     if not os.path.exists(python_bin):
         return False, [
-            "Python venv not found - skipping notebook tests in dev container"
+            "Python venv not found - skipping notebook tests in dev container",
         ]
 
     try:
@@ -68,7 +70,7 @@ def test_notebook(notebook_path: str) -> tuple[bool, list[str]]:
         return False, [f"Python not found at {python_bin}"]
 
 
-def main():
+def main() -> None:
     """Test all notebooks in the notebooks directory."""
     project_root = Path(os.path.dirname(os.path.abspath(__file__))).parent
     notebooks_dir = project_root / "notebooks"
@@ -88,10 +90,10 @@ def main():
 
     if not os.path.exists(python_bin):
         sys.stdout.write(
-            f"Notebook tests skipped - Python venv not found at {python_bin}\n"
+            f"Notebook tests skipped - Python venv not found at {python_bin}\n",
         )
         sys.stdout.write(
-            "This is expected in dev container setups without full environment setup.\n"
+            "This is expected in dev container setups without full environment setup.\n",
         )
         sys.exit(0)
 

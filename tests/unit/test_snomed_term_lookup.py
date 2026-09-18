@@ -1,5 +1,4 @@
-"""
-Unit tests for the SnomedTermLookup class.
+"""Unit tests for the SnomedTermLookup class.
 
 This module provides comprehensive test coverage for SNOMED concept term lookup,
 including:
@@ -82,8 +81,7 @@ def temp_description_file(sample_description_dataframe):
 
 
 class TestSnomedTermLookup:
-    """
-     Tests for the SnomedTermLookup class.
+    """Tests for the SnomedTermLookup class.
 
      The SnomedTermLookup class provides text search capabilities over SNOMED
     CT description tables.
@@ -94,17 +92,18 @@ class TestSnomedTermLookup:
      - Can filter by active status
      - Provides prefix matching for terms
 
-     Parameters:
+    Parameters
+    ----------
      - snomed_description_path: Path to SNOMED description file (optional)
      - active_only: Whether to include inactive concepts (default: True)
 
      This is the primary interface for searching SNOMED concepts by their
      descriptive terms, enabling text-based concept discovery.
+
     """
 
-    def test_initialization_without_file(self):
-        """
-        Test that lookup can be initialized without a file path.
+    def test_initialization_without_file(self) -> None:
+        """Test that lookup can be initialized without a file path.
 
         Expected behavior: Instance created with df=None initially.
 
@@ -120,9 +119,8 @@ class TestSnomedTermLookup:
         assert lookup.df is None
         assert lookup.active_only is True
 
-    def test_load_descriptions_invalid_file(self):
-        """
-        Test handling of invalid/non-existent file path.
+    def test_load_descriptions_invalid_file(self) -> None:
+        """Test handling of invalid/non-existent file path.
 
         Expected behavior: Instance created with df=None (graceful failure).
 
@@ -140,9 +138,8 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
-        """
-        Test exact term matching in SNOMED descriptions.
+    ) -> None:
+        """Test exact term matching in SNOMED descriptions.
 
         Expected behavior: Returns concepts with terms matching exactly.
 
@@ -175,10 +172,11 @@ class TestSnomedTermLookup:
         )
 
     def test_find_concepts_by_term_case_sensitive(
-        self, sample_description_dataframe, temp_description_file
-    ):
-        """
-        Test case-sensitive and case-insensitive term matching.
+        self,
+        sample_description_dataframe,
+        temp_description_file,
+    ) -> None:
+        """Test case-sensitive and case-insensitive term matching.
 
         Expected behavior: Respects ignore_case parameter.
 
@@ -214,7 +212,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test prefix matching."""
         desc_file = os.path.join(
             temp_description_file,
@@ -235,7 +233,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test limiting number of results."""
         desc_file = os.path.join(
             temp_description_file,
@@ -250,7 +248,7 @@ class TestSnomedTermLookup:
 
         assert len(results) <= 2
 
-    def test_find_concepts_by_term_empty_dataframe(self):
+    def test_find_concepts_by_term_empty_dataframe(self) -> None:
         """Test finding concepts when DataFrame is empty."""
         with tempfile.TemporaryDirectory() as tmpdir:
             desc_file = os.path.join(tmpdir, "empty.txt")
@@ -261,7 +259,7 @@ class TestSnomedTermLookup:
 
             assert results == []
 
-    def test_find_concepts_by_term_none_df(self):
+    def test_find_concepts_by_term_none_df(self) -> None:
         """Test finding concepts when DataFrame is None."""
         lookup = SnomedTermLookup()
         results = lookup.find_concepts_by_term("test")
@@ -273,7 +271,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test matching terms with special characters."""
         desc_file = os.path.join(
             temp_description_file,
@@ -292,7 +290,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test handling of NaN values in term column."""
         desc_file = os.path.join(
             temp_description_file,
@@ -311,7 +309,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test matching with empty string term."""
         desc_file = os.path.join(
             temp_description_file,
@@ -330,7 +328,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test that special regex characters don't break matching."""
         desc_file = os.path.join(
             temp_description_file,
@@ -345,7 +343,11 @@ class TestSnomedTermLookup:
 
         assert isinstance(results, list)
 
-    def test_getconcept_info(self, sample_description_dataframe, temp_description_file):
+    def test_getconcept_info(
+        self,
+        sample_description_dataframe,
+        temp_description_file,
+    ) -> None:
         """Test getting concept information."""
         desc_file = os.path.join(
             temp_description_file,
@@ -367,7 +369,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test getting information for non-existent CUI."""
         desc_file = os.path.join(
             temp_description_file,
@@ -386,7 +388,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test handling of invalid CUI format."""
         desc_file = os.path.join(
             temp_description_file,
@@ -401,7 +403,7 @@ class TestSnomedTermLookup:
 
         assert info is None
 
-    def test_getconcept_info_none_df(self):
+    def test_getconcept_info_none_df(self) -> None:
         """Test getting concept info when DataFrame is None."""
         lookup = SnomedTermLookup()
         info = lookup.getconcept_info("123")
@@ -412,7 +414,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test handling of float CUI values."""
         desc_file = os.path.join(
             temp_description_file,
@@ -432,7 +434,7 @@ class TestSnomedTermLookup:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test handling of string CUI values."""
         desc_file = os.path.join(
             temp_description_file,
@@ -451,14 +453,14 @@ class TestSnomedTermLookup:
 class TestCreateTermLookupFromDirectory:
     """Tests for create_term_lookup_from_directory function."""
 
-    def test_creates_lookup_from_directory(self, temp_description_file):
+    def test_creates_lookup_from_directory(self, temp_description_file) -> None:
         """Test that lookup can be created from directory path."""
         lookup = create_term_lookup_from_directory(temp_description_file)
 
         assert lookup.df is not None
         assert len(lookup.df) > 0
 
-    def test_raises_file_not_found_error_no_files(self):
+    def test_raises_file_not_found_error_no_files(self) -> None:
         """Test that FileNotFoundError is raised when no description file found."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(FileNotFoundError):
@@ -467,16 +469,17 @@ class TestCreateTermLookupFromDirectory:
     def test_creates_lookup_with_active_false(
         self,
         temp_description_file,
-    ):
+    ) -> None:
         """Test creating lookup with active_only=False."""
         lookup = create_term_lookup_from_directory(
-            temp_description_file, active_only=False
+            temp_description_file,
+            active_only=False,
         )
 
         assert lookup.df is not None
         assert lookup.active_only is False
 
-    def test_creates_lookup_with_custom_pattern(self, mocker):
+    def test_creates_lookup_with_custom_pattern(self, mocker) -> None:
         """Test that custom patterns can be used to find description files."""
         with tempfile.TemporaryDirectory() as tmpdir:
             desc_dir = os.path.join(tmpdir, "Terminology")
@@ -484,7 +487,9 @@ class TestCreateTermLookupFromDirectory:
 
             desc_file = os.path.join(desc_dir, "sct2_Description_Custom.txt")
             pd.DataFrame({"id": ["1"], "conceptId": [123], "term": ["test"]}).to_csv(
-                desc_file, sep="\t", index=False
+                desc_file,
+                sep="\t",
+                index=False,
             )
 
             mock_glob = mocker.patch("glob.glob")
@@ -502,7 +507,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test searching for multiple terms at once."""
         desc_file = os.path.join(
             temp_description_file,
@@ -523,7 +528,7 @@ class TestBatchSearch:
             assert isinstance(cui, str)
             assert isinstance(matched, str)
 
-    def test_find_concepts_batch_empty_list(self):
+    def test_find_concepts_batch_empty_list(self) -> None:
         """Test batch search with empty list."""
         lookup = SnomedTermLookup()
 
@@ -535,7 +540,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test batch search with prefix matching."""
         desc_file = os.path.join(
             temp_description_file,
@@ -556,7 +561,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fuzzy matching when rapidfuzz is not available."""
         desc_file = os.path.join(
             temp_description_file,
@@ -576,7 +581,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fuzzy matching with no matching terms."""
         desc_file = os.path.join(
             temp_description_file,
@@ -591,7 +596,7 @@ class TestBatchSearch:
 
         assert isinstance(results, list)
 
-    def test_find_concepts_by_term_fuzzy_empty_df(self):
+    def test_find_concepts_by_term_fuzzy_empty_df(self) -> None:
         """Test fuzzy matching with empty DataFrame."""
         lookup = SnomedTermLookup()
 
@@ -604,7 +609,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test fuzzy matching with high minimum score."""
         desc_file = os.path.join(
             temp_description_file,
@@ -623,7 +628,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test case-insensitive matching with different case queries."""
         desc_file = os.path.join(
             temp_description_file,
@@ -644,7 +649,7 @@ class TestBatchSearch:
         self,
         sample_description_dataframe,
         temp_description_file,
-    ):
+    ) -> None:
         """Test that active_only filtering works correctly."""
         desc_file = os.path.join(
             temp_description_file,
@@ -654,10 +659,12 @@ class TestBatchSearch:
         )
 
         lookup_active = SnomedTermLookup(
-            snomed_description_path=desc_file, active_only=True
+            snomed_description_path=desc_file,
+            active_only=True,
         )
         lookup_inactive = SnomedTermLookup(
-            snomed_description_path=desc_file, active_only=False
+            snomed_description_path=desc_file,
+            active_only=False,
         )
 
         assert len(lookup_active.df) < len(lookup_inactive.df)

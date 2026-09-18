@@ -1,10 +1,12 @@
 """Unit tests for vocabulary mapping benchmarking utilities."""
 
+from __future__ import annotations
+
 
 class TestMappingDataset:
     """Tests for mapping dataset generation functionality."""
 
-    def test_generate_mapping_dataset_structure(self):
+    def test_generate_mapping_dataset_structure(self) -> None:
         """Test that generated dataset has correct structure."""
         from snomed_methods.benchmarking.vocabulary import generate_mapping_dataset
 
@@ -19,7 +21,7 @@ class TestMappingDataset:
         assert isinstance(sample["target_codes"], list)
         assert len(sample["target_codes"]) > 0
 
-    def test_generate_mapping_dataset_num_samples(self):
+    def test_generate_mapping_dataset_num_samples(self) -> None:
         """Test number of samples generation."""
         from snomed_methods.benchmarking.vocabulary import generate_mapping_dataset
 
@@ -31,7 +33,7 @@ class TestMappingDataset:
 class TestVocabularyMetrics:
     """Tests for vocabulary mapping metrics."""
 
-    def test_precision_at_k(self):
+    def test_precision_at_k(self) -> None:
         """Test precision@K calculation."""
         from snomed_methods.benchmarking.vocabulary import precision_at_k
 
@@ -41,7 +43,7 @@ class TestVocabularyMetrics:
         p3 = precision_at_k(predicted, expected, k=3)
         assert abs(p3 - 0.3333) < 0.01
 
-    def test_recall_at_k(self):
+    def test_recall_at_k(self) -> None:
         """Test recall@K calculation."""
         from snomed_methods.benchmarking.vocabulary import recall_at_k
 
@@ -51,7 +53,7 @@ class TestVocabularyMetrics:
         r3 = recall_at_k(predicted, expected, k=3)
         assert abs(r3 - 0.6667) < 0.01
 
-    def test_coverage_rate(self):
+    def test_coverage_rate(self) -> None:
         """Test coverage rate calculation."""
         from snomed_methods.benchmarking.vocabulary import coverage_rate
 
@@ -61,7 +63,7 @@ class TestVocabularyMetrics:
         cov = coverage_rate(predicted, expected)
         assert abs(cov - 0.6667) < 0.01
 
-    def test_exact_match_rate(self):
+    def test_exact_match_rate(self) -> None:
         """Test exact match rate calculation."""
         from snomed_methods.benchmarking.vocabulary import exact_match_rate
 
@@ -69,7 +71,7 @@ class TestVocabularyMetrics:
         expected = {"A", "B"}
         assert exact_match_rate(predicted, expected) == 1.0
 
-    def test_mean_reciprocal_rank(self):
+    def test_mean_reciprocal_rank(self) -> None:
         """Test MRR calculation."""
         from snomed_methods.benchmarking.vocabulary import mean_reciprocal_rank
 
@@ -83,13 +85,13 @@ class TestVocabularyMetrics:
 class TestEvaluateMapper:
     """Tests for evaluate_mapper function."""
 
-    def test_evaluate_with_list_prediction(self):
+    def test_evaluate_with_list_prediction(self) -> None:
         """Test evaluation with list-based prediction."""
         from snomed_methods.benchmarking.vocabulary import (
             evaluate_mapper,
         )
 
-        def mock_mapper(snomed_cui):
+        def mock_mapper(_snomed_cui) -> list[str]:
             return ["ICD_E11.9", "LOINC_4544-3"]
 
         dataset = [
@@ -101,13 +103,13 @@ class TestEvaluateMapper:
         assert "coverage_rate" in results
         assert "num_samples" in results
 
-    def test_evaluate_multiple_k_values(self):
+    def test_evaluate_multiple_k_values(self) -> None:
         """Test evaluation with multiple K values."""
         from snomed_methods.benchmarking.vocabulary import (
             evaluate_mapper,
         )
 
-        def mock_mapper(snomed_cui):
+        def mock_mapper(_snomed_cui) -> list[str]:
             return [f"C{i}" for i in range(10)]
 
         dataset = [
@@ -128,15 +130,15 @@ class TestEvaluateMapper:
 class TestVocabularyIntegration:
     """Integration tests for vocabulary mapping benchmarking."""
 
-    def test_full_pipeline(self):
+    def test_full_pipeline(self) -> None:
         """Test complete evaluation pipeline."""
         from snomed_methods.benchmarking.vocabulary import (
             evaluate_mapper,
             generate_mapping_dataset,
         )
 
-        def mock_mapper(snomed_cui):
-            return [f"ICD_{snomed_cui[:3]}", f"LOINC_{snomed_cui[-3:]}"]
+        def mock_mapper(_snomed_cui) -> list[str]:
+            return [f"ICD_{_snomed_cui[:3]}", f"LOINC_{_snomed_cui[-3:]}"]
 
         dataset = generate_mapping_dataset(num_samples=15)
 
@@ -147,7 +149,7 @@ class TestVocabularyIntegration:
         assert "mrr" in results
         assert "precision@1" in results
 
-    def test_dataset_loading(self):
+    def test_dataset_loading(self) -> None:
         """Test loading pre-generated datasets."""
         from snomed_methods.benchmarking.vocabulary import load_mapping_datasets
 
@@ -157,7 +159,7 @@ class TestVocabularyIntegration:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for _name, data in datasets.items():
+        for data in datasets.values():
             assert len(data) > 0
             assert "snomed_cui" in data[0]
             assert "target_codes" in data[0]
@@ -166,13 +168,13 @@ class TestVocabularyIntegration:
 class TestVocabularyEdgeCases:
     """Tests for edge cases in vocabulary evaluation."""
 
-    def test_empty_prediction(self):
+    def test_empty_prediction(self) -> None:
         """Test with empty prediction."""
         from snomed_methods.benchmarking.vocabulary import (
             evaluate_mapper,
         )
 
-        def mock_mapper(snomed_cui):
+        def mock_mapper(_snomed_cui) -> list[str]:
             return []
 
         dataset = [
@@ -183,13 +185,13 @@ class TestVocabularyEdgeCases:
 
         assert "num_samples" in results
 
-    def test_empty_expected(self):
+    def test_empty_expected(self) -> None:
         """Test with empty expected set."""
         from snomed_methods.benchmarking.vocabulary import (
             evaluate_mapper,
         )
 
-        def mock_mapper(snomed_cui):
+        def mock_mapper(_snomed_cui) -> list[str]:
             return ["C001", "C002"]
 
         dataset = [

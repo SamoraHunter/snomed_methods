@@ -2,7 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Dataset generation and loading for term lookup benchmarking."""
 
-from typing import List, Optional
+from __future__ import annotations
+
+import pathlib
+from pathlib import Path
 
 try:
     from datasets import DatasetDict
@@ -14,8 +17,8 @@ except ImportError:
 
 def generate_term_dataset(
     num_samples: int = 100,
-    medical_terms: Optional[List[tuple]] = None,
-) -> List[dict]:
+    medical_terms: list[tuple] | None = None,
+) -> list[dict]:
     """Generate synthetic term lookup dataset for benchmarking.
 
     Each sample contains a clinical term and the expected SNOMED CUI that
@@ -27,6 +30,7 @@ def generate_term_dataset(
 
     Returns:
         List of dicts with keys: 'term', 'expected_cui'
+
     """
     if medical_terms is None:
         medical_terms = [
@@ -57,13 +61,13 @@ def generate_term_dataset(
                 "term": term,
                 "expected_cui": cui,
                 "term_length": len(term),
-            }
+            },
         )
 
     return results
 
 
-def load_term_datasets(cache_dir: Optional[str] = None) -> dict:
+def load_term_datasets(cache_dir: str | None = None) -> dict:
     """Load pre-generated term datasets or generate new ones.
 
     Args:
@@ -71,15 +75,12 @@ def load_term_datasets(cache_dir: Optional[str] = None) -> dict:
 
     Returns:
         Dict with dataset names as keys and lists of samples
+
     """
-    import os
-
     if cache_dir is None:
-        cache_dir = os.path.join(
-            os.path.dirname(__file__), "..", "cache", "term_datasets"
-        )
+        cache_dir = Path(__file__).parent / ".." / "cache" / "term_datasets"
 
-    os.makedirs(cache_dir, exist_ok=True)
+    pathlib.Path(cache_dir).mkdir(exist_ok=True, parents=True)
 
     return {
         "small": generate_term_dataset(num_samples=25),

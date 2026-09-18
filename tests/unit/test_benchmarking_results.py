@@ -36,7 +36,7 @@ def sample_benchmark_results():
 class TestAggregateResults:
     """Tests for aggregate_results function."""
 
-    def test_aggregate_basic(self, sample_benchmark_results):
+    def test_aggregate_basic(self, sample_benchmark_results) -> None:
         """Test basic aggregation of benchmark results."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -48,7 +48,7 @@ class TestAggregateResults:
         assert "recall" in df.columns
         assert df.loc["method_a", "precision"] == 0.85
 
-    def test_aggregate_removes_num_samples(self, sample_benchmark_results):
+    def test_aggregate_removes_num_samples(self, sample_benchmark_results) -> None:
         """Test that num_samples column is removed if present."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -60,7 +60,7 @@ class TestAggregateResults:
 
         assert "num_samples" not in df.columns
 
-    def test_aggregate_empty_input(self):
+    def test_aggregate_empty_input(self) -> None:
         """Test aggregation with empty input."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -68,7 +68,7 @@ class TestAggregateResults:
 
         assert len(df) == 0
 
-    def test_aggregate_single_method(self, sample_benchmark_results):
+    def test_aggregate_single_method(self, sample_benchmark_results) -> None:
         """Test aggregation with single method."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -78,7 +78,7 @@ class TestAggregateResults:
         assert len(df) == 1
         assert "method_a" in df.index
 
-    def test_aggregate_numeric_only(self, sample_benchmark_results):
+    def test_aggregate_numeric_only(self, sample_benchmark_results) -> None:
         """Test that only numeric columns are included."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -97,7 +97,7 @@ class TestAggregateResults:
 class TestCompareBenchmarks:
     """Tests for compare_benchmarks function."""
 
-    def test_compare_all_metrics(self, sample_benchmark_results):
+    def test_compare_all_metrics(self, sample_benchmark_results) -> None:
         """Test comparing benchmarks across all metrics."""
         from src.snomed_methods.benchmarking.results import compare_benchmarks
 
@@ -107,7 +107,7 @@ class TestCompareBenchmarks:
         assert "precision" in df.columns
         assert "recall" in df.columns
 
-    def test_compare_specific_metric(self, sample_benchmark_results):
+    def test_compare_specific_metric(self, sample_benchmark_results) -> None:
         """Test comparing benchmarks for a specific metric."""
         from src.snomed_methods.benchmarking.results import compare_benchmarks
 
@@ -116,7 +116,7 @@ class TestCompareBenchmarks:
         assert len(df) == 3
         assert list(df.columns) == ["precision"]
 
-    def test_compare_metric_not_found(self, sample_benchmark_results):
+    def test_compare_metric_not_found(self, sample_benchmark_results) -> None:
         """Test comparing with non-existent metric returns all."""
         from src.snomed_methods.benchmarking.results import compare_benchmarks
 
@@ -129,7 +129,7 @@ class TestCompareBenchmarks:
 class TestSummarizeBenchmark:
     """Tests for summarize_benchmark function."""
 
-    def test_summarize_basic(self, sample_benchmark_results):
+    def test_summarize_basic(self, sample_benchmark_results) -> None:
         """Test basic summary generation."""
         from src.snomed_methods.benchmarking.results import summarize_benchmark
 
@@ -141,7 +141,7 @@ class TestSummarizeBenchmark:
         assert isinstance(df.loc["precision", "mean"], float)
         assert isinstance(df.loc["recall", "std"], float)
 
-    def test_summarize_single_value(self):
+    def test_summarize_single_value(self) -> None:
         """Test summary with single value per metric."""
         from src.snomed_methods.benchmarking.results import summarize_benchmark
 
@@ -152,7 +152,7 @@ class TestSummarizeBenchmark:
         for col in df.columns:
             assert isinstance(df.loc["precision", col], (int, float))
 
-    def test_summarize_with_string_columns(self):
+    def test_summarize_with_string_columns(self) -> None:
         """Test summary excludes non-numeric columns."""
         from src.snomed_methods.benchmarking.results import summarize_benchmark
 
@@ -171,7 +171,7 @@ class TestSummarizeBenchmark:
 class TestSaveResults:
     """Tests for save_results function."""
 
-    def test_save_csv(self, sample_benchmark_results):
+    def test_save_csv(self, sample_benchmark_results) -> None:
         """Test saving results as CSV."""
         from src.snomed_methods.benchmarking.results import save_results
 
@@ -187,7 +187,7 @@ class TestSaveResults:
             if os.path.exists(output_path):
                 os.unlink(output_path)
 
-    def test_save_json(self, sample_benchmark_results):
+    def test_save_json(self, sample_benchmark_results) -> None:
         """Test saving results as JSON."""
         from src.snomed_methods.benchmarking.results import save_results
 
@@ -206,7 +206,7 @@ class TestSaveResults:
             if os.path.exists(output_path):
                 os.unlink(output_path)
 
-    def test_save_invalid_format(self, sample_benchmark_results):
+    def test_save_invalid_format(self, sample_benchmark_results) -> None:
         """Test saving with invalid format raises error."""
         from src.snomed_methods.benchmarking.results import save_results
 
@@ -224,7 +224,7 @@ class TestSaveResults:
 class TestLoadResults:
     """Tests for load_results function."""
 
-    def test_load_csv(self, sample_benchmark_results):
+    def test_load_csv(self, sample_benchmark_results) -> None:
         """Test loading results from CSV."""
         from src.snomed_methods.benchmarking.results import load_results, save_results
 
@@ -241,7 +241,7 @@ class TestLoadResults:
             if os.path.exists(output_path):
                 os.unlink(output_path)
 
-    def test_load_json(self, sample_benchmark_results):
+    def test_load_json(self, sample_benchmark_results) -> None:
         """Test loading results from JSON."""
         from src.snomed_methods.benchmarking.results import load_results, save_results
 
@@ -258,7 +258,7 @@ class TestLoadResults:
             if os.path.exists(output_path):
                 os.unlink(output_path)
 
-    def test_load_invalid_format(self):
+    def test_load_invalid_format(self) -> None:
         """Test loading with invalid format raises error."""
         from src.snomed_methods.benchmarking.results import load_results
 
@@ -276,29 +276,33 @@ class TestLoadResults:
 class TestRankBenchmarks:
     """Tests for rank_benchmarks function."""
 
-    def test_rank_descending(self, sample_benchmark_results):
+    def test_rank_descending(self, sample_benchmark_results) -> None:
         """Test ranking in descending order."""
         from src.snomed_methods.benchmarking.results import rank_benchmarks
 
         df = rank_benchmarks(
-            sample_benchmark_results, metric="precision", ascending=False
+            sample_benchmark_results,
+            metric="precision",
+            ascending=False,
         )
 
         values = df["precision"].tolist()
         assert values == sorted(values, reverse=True)
 
-    def test_rank_ascending(self, sample_benchmark_results):
+    def test_rank_ascending(self, sample_benchmark_results) -> None:
         """Test ranking in ascending order."""
         from src.snomed_methods.benchmarking.results import rank_benchmarks
 
         df = rank_benchmarks(
-            sample_benchmark_results, metric="precision", ascending=True
+            sample_benchmark_results,
+            metric="precision",
+            ascending=True,
         )
 
         values = df["precision"].tolist()
         assert values == sorted(values)
 
-    def test_rank_by_recall(self, sample_benchmark_results):
+    def test_rank_by_recall(self, sample_benchmark_results) -> None:
         """Test ranking by recall."""
         from src.snomed_methods.benchmarking.results import rank_benchmarks
 
@@ -311,7 +315,7 @@ class TestRankBenchmarks:
 class TestBestPerformance:
     """Tests for best_performance function."""
 
-    def test_best_precision(self, sample_benchmark_results):
+    def test_best_precision(self, sample_benchmark_results) -> None:
         """Test finding best by precision."""
         from src.snomed_methods.benchmarking.results import best_performance
 
@@ -320,7 +324,7 @@ class TestBestPerformance:
         assert name == "method_c"
         assert score == 0.92
 
-    def test_best_recall(self, sample_benchmark_results):
+    def test_best_recall(self, sample_benchmark_results) -> None:
         """Test finding best by recall."""
         from src.snomed_methods.benchmarking.results import best_performance
 
@@ -333,7 +337,7 @@ class TestBestPerformance:
 class TestWorstPerformance:
     """Tests for worst_performance function."""
 
-    def test_worst_precision(self, sample_benchmark_results):
+    def test_worst_precision(self, sample_benchmark_results) -> None:
         """Test finding worst by precision."""
         from src.snomed_methods.benchmarking.results import worst_performance
 
@@ -342,7 +346,7 @@ class TestWorstPerformance:
         assert name == "method_b"
         assert score == 0.78
 
-    def test_worst_recall(self, sample_benchmark_results):
+    def test_worst_recall(self, sample_benchmark_results) -> None:
         """Test finding worst by recall."""
         from src.snomed_methods.benchmarking.results import worst_performance
 
@@ -355,7 +359,7 @@ class TestWorstPerformance:
 class TestGetAllMetrics:
     """Tests for get_all_metrics function."""
 
-    def test_get_all_metrics_basic(self, sample_benchmark_results):
+    def test_get_all_metrics_basic(self, sample_benchmark_results) -> None:
         """Test getting all unique metrics."""
         from src.snomed_methods.benchmarking.results import get_all_metrics
 
@@ -366,7 +370,7 @@ class TestGetAllMetrics:
         assert "f1_score" in metrics
         assert "accuracy" in metrics
 
-    def test_get_all_metrics_empty(self):
+    def test_get_all_metrics_empty(self) -> None:
         """Test getting metrics from empty results."""
         from src.snomed_methods.benchmarking.results import get_all_metrics
 
@@ -374,7 +378,7 @@ class TestGetAllMetrics:
 
         assert len(metrics) == 0
 
-    def test_get_all_metrics_sorted(self, sample_benchmark_results):
+    def test_get_all_metrics_sorted(self, sample_benchmark_results) -> None:
         """Test that returned metrics are sorted."""
         from src.snomed_methods.benchmarking.results import get_all_metrics
 
@@ -386,7 +390,7 @@ class TestGetAllMetrics:
 class TestFilterMetrics:
     """Tests for filter_metrics function."""
 
-    def test_filter_include(self, sample_benchmark_results):
+    def test_filter_include(self, sample_benchmark_results) -> None:
         """Test filtering with include patterns."""
         from src.snomed_methods.benchmarking.results import filter_metrics
 
@@ -395,7 +399,7 @@ class TestFilterMetrics:
         assert "precision" in filtered["method_a"]
         assert "recall" not in filtered["method_a"]
 
-    def test_filter_exclude(self, sample_benchmark_results):
+    def test_filter_exclude(self, sample_benchmark_results) -> None:
         """Test filtering with exclude patterns."""
         from src.snomed_methods.benchmarking.results import filter_metrics
 
@@ -404,7 +408,7 @@ class TestFilterMetrics:
         assert "precision" in filtered["method_a"]
         assert "recall" not in filtered["method_a"]
 
-    def test_filter_both_include_exclude(self, sample_benchmark_results):
+    def test_filter_both_include_exclude(self, sample_benchmark_results) -> None:
         """Test filtering with both include and exclude patterns."""
         from src.snomed_methods.benchmarking.results import filter_metrics
 
@@ -417,7 +421,7 @@ class TestFilterMetrics:
         assert "f1_score" not in filtered["method_a"]
         assert "accuracy" in filtered["method_a"]
 
-    def test_filter_no_patterns(self, sample_benchmark_results):
+    def test_filter_no_patterns(self, sample_benchmark_results) -> None:
         """Test filtering with no patterns returns all."""
         from src.snomed_methods.benchmarking.results import filter_metrics
 
@@ -429,7 +433,7 @@ class TestFilterMetrics:
 class TestEvaluateSuite:
     """Tests for evaluate_suite function."""
 
-    def test_evaluate_basic(self, sample_benchmark_results):
+    def test_evaluate_basic(self, sample_benchmark_results) -> None:
         """Test basic suite evaluation."""
         from src.snomed_methods.benchmarking.results import evaluate_suite
 
@@ -438,7 +442,7 @@ class TestEvaluateSuite:
         assert len(df) == 3
         assert "method_a" in df.index
 
-    def test_evaluate_with_output_dir(self, sample_benchmark_results):
+    def test_evaluate_with_output_dir(self, sample_benchmark_results) -> None:
         """Test suite evaluation with output directory."""
         from src.snomed_methods.benchmarking.results import evaluate_suite
 
@@ -448,7 +452,7 @@ class TestEvaluateSuite:
             assert len(df) == 3
             assert "method_a" in df.index
 
-    def test_evaluate_empty(self):
+    def test_evaluate_empty(self) -> None:
         """Test suite evaluation with empty results."""
         from src.snomed_methods.benchmarking.results import evaluate_suite
 
@@ -460,7 +464,7 @@ class TestEvaluateSuite:
 class TestBenchmarkingResultsEdgeCases:
     """Tests for edge cases in benchmarking results."""
 
-    def test_aggregate_single_numeric_value(self):
+    def test_aggregate_single_numeric_value(self) -> None:
         """Test aggregation with single numeric value."""
         from src.snomed_methods.benchmarking.results import aggregate_results
 
@@ -470,7 +474,7 @@ class TestBenchmarkingResultsEdgeCases:
         assert len(df) == 1
         assert df.loc["method_a", "precision"] == 0.85
 
-    def test_compare_metric_partial_match(self, sample_benchmark_results):
+    def test_compare_metric_partial_match(self, sample_benchmark_results) -> None:
         """Test comparing with partial metric name."""
         from src.snomed_methods.benchmarking.results import compare_benchmarks
 
@@ -479,7 +483,7 @@ class TestBenchmarkingResultsEdgeCases:
         assert len(df) == 3
         assert "precision" in df.columns
 
-    def test_rank_with_ties(self):
+    def test_rank_with_ties(self) -> None:
         """Test ranking with tied values."""
         from src.snomed_methods.benchmarking.results import rank_benchmarks
 
@@ -492,7 +496,7 @@ class TestBenchmarkingResultsEdgeCases:
 
         assert len(df) == 3
 
-    def test_filter_empty_results(self):
+    def test_filter_empty_results(self) -> None:
         """Test filtering empty results."""
         from src.snomed_methods.benchmarking.results import filter_metrics
 
@@ -500,7 +504,7 @@ class TestBenchmarkingResultsEdgeCases:
 
         assert filtered == {}
 
-    def test_summary_with_all_same_values(self):
+    def test_summary_with_all_same_values(self) -> None:
         """Test summary when all values are the same."""
         from src.snomed_methods.benchmarking.results import summarize_benchmark
 
@@ -515,7 +519,7 @@ class TestBenchmarkingResultsEdgeCases:
         assert df.loc["precision", "min"] == 0.85
         assert df.loc["precision", "max"] == 0.85
 
-    def test_evaluate_suite_creates_plot(self, sample_benchmark_results):
+    def test_evaluate_suite_creates_plot(self, sample_benchmark_results) -> None:
         """Test that evaluate_suite creates plot when output_dir is given."""
         from pathlib import Path
 

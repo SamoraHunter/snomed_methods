@@ -30,13 +30,14 @@ Reference:
     - Sentence-Transformers: https://www.sbert.net/
 """
 
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from pathlib import Path
 
 import numpy as np
 
 
-def load_concepts_from_cdb(cdb: Any) -> tuple:
+def load_concepts_from_cdb(cdb: object) -> tuple:
     """Load concepts from MedCAT CDB."""
     cui_to_name = {}
     for cui, name in cdb.cui2preferred_name.items():
@@ -70,11 +71,11 @@ class RAGRetriever:
 
     def __init__(
         self,
-        embedder: Any = None,
-        cui_to_embedding: Optional[Dict[str, np.ndarray]] = None,
-        cui_to_name: Optional[Dict[str, str]] = None,
-        index_path: Optional[str] = None,
-        uk_path: Optional[str] = None,
+        embedder: object = None,
+        cui_to_embedding: dict[str, np.ndarray] | None = None,
+        cui_to_name: dict[str, str] | None = None,
+        index_path: str | None = None,
+        uk_path: str | None = None,  # noqa: ARG002 (reserved for future use)
     ) -> None:
         """
         Initialize RAG retriever.
@@ -103,7 +104,7 @@ class RAGRetriever:
         self.index = None
         self.embedding_dim = None
 
-        if index_path and os.path.exists(index_path):
+        if index_path and Path(index_path).exists():
             self.load_index(index_path)
         else:
             self._build_index()
@@ -120,7 +121,7 @@ class RAGRetriever:
             RuntimeError: If FAISS is not installed.
         """
         try:
-            import faiss
+            import faiss  # noqa: PLC0415
         except ImportError as e:
             msg = (
                 "FAISS not installed. "
@@ -129,7 +130,8 @@ class RAGRetriever:
             raise RuntimeError(msg) from e
 
         if not self.cui_to_embedding:
-            raise ValueError("No embeddings available to build index")
+            msg_0 = "No embeddings available to build index"
+            raise ValueError(msg_0)
 
         cuis = list(self.cui_to_embedding.keys())
         embeddings = np.array([self.cui_to_embedding[cui] for cui in cuis])
@@ -138,7 +140,9 @@ class RAGRetriever:
         self.cui_list = cuis
 
         embeddings_normalized = embeddings / np.linalg.norm(
-            embeddings, axis=1, keepdims=True
+            embeddings,
+            axis=1,
+            keepdims=True,
         )
 
         self.index = faiss.IndexFlatIP(self.embedding_dim)
@@ -148,8 +152,9 @@ class RAGRetriever:
         self,
         query: str,
         top_k: int = 20,
+        *,
         return_scores: bool = True,
-    ) -> List[Tuple[str, str, float]]:
+    ) -> list[tuple[str, str, float]]:
         """
         Retrieve relevant concepts for a query using embedding similarity.
 
@@ -170,13 +175,15 @@ class RAGRetriever:
             ValueError: If index has not been built or loaded.
         """
         if self.index is None:
-            raise ValueError("Index not built or loaded")
+            msg = "Index not built or loaded"
+            raise ValueError(msg)
 
         query_embedding = self._embed_query(query)
         query_normalized = query_embedding / np.linalg.norm(query_embedding)
 
         distances, indices = self.index.search(
-            query_normalized.reshape(1, -1).astype(np.float32), top_k
+            query_normalized.reshape(1, -1).astype(np.float32),
+            top_k,
         )
 
         results = []
@@ -218,16 +225,17 @@ class RAGRetriever:
             RuntimeError: If FAISS is not installed.
         """
         try:
-            import faiss
+            import faiss  # noqa: PLC0415
         except ImportError as e:
-            raise RuntimeError("FAISS not installed") from e
+            msg = "FAISS not installed"
+            raise RuntimeError(msg) from e
 
-        import pickle
+        import pickle  # noqa: PLC0415
 
         if path.endswith(".faiss"):
             faiss.write_index(self.index, path)
         elif path.endswith(".pkl"):
-            with open(path, "wb") as f:
+            with Path(path).open("wb") as f:
                 pickle.dump(
                     {
                         "index": self.index,
@@ -256,18 +264,19 @@ class RAGRetriever:
             ValueError: If the loaded index is incompatible.
         """
         try:
-            import faiss
+            import faiss  # noqa: PLC0415
         except ImportError as e:
-            raise RuntimeError("FAISS not installed") from e
+            msg = "FAISS not installed"
+            raise RuntimeError(msg) from e
 
-        import pickle
+        import pickle  # noqa: PLC0415
 
         if path.endswith(".faiss"):
             self.index = faiss.read_index(path)
             self.embedding_dim = self.index.d
         elif path.endswith(".pkl"):
-            with open(path, "rb") as f:
-                data = pickle.load(f)
+            with Path(path).open("rb") as f:
+                data = pickle.load(f)  # noqa: S301
             self.index = data.get("index")
             self.cui_list = data.get("cui_list", [])
             self.embedding_dim = data.get("embedding_dim")
@@ -301,7 +310,7 @@ class RAGExplanations:
 
     def __init__(
         self,
-        embedder: Any = None,
+        embedder: object = None,
         backend: str = "ollama",
         model_name: str = "qwen2.5-coder",
     ) -> None:
@@ -328,7 +337,7 @@ class RAGExplanations:
         query: str,
         cui: str,
         concept_name: str,
-        retrieved_concepts: List[Tuple[str, str, float]],
+        retrieved_concepts: list[tuple[str, str, float]],
     ) -> str:
         """Generate explanation for why a concept was retrieved.
 
@@ -372,9 +381,9 @@ understand the relevance of this SNOMED concept to their search query."""
 
     def _generate_ollama(self, prompt: str) -> str:
         """Generate explanation using Ollama."""
-        import ollama
-
         try:
+            import ollama  # noqa: PLC0415
+
             response = ollama.chat(
                 model=self.model_name,
                 messages=[
@@ -389,12 +398,12 @@ understand the relevance of this SNOMED concept to their search query."""
                 ],
             )
             return response["message"]["content"].strip()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return f"Could not generate explanation: {e}"
 
     def _generate_hf(self, prompt: str) -> str:
         """Generate explanation using Hugging Face model."""
-        from transformers import pipeline
+        from transformers import pipeline  # noqa: PLC0415
 
         try:
             generator = pipeline(
@@ -405,14 +414,14 @@ understand the relevance of this SNOMED concept to their search query."""
             )
             result = generator(prompt)[0]
             return result["generated_text"].strip()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             return f"Could not generate explanation: {e}"
 
     def generate_batch_explanations(
         self,
         query: str,
-        retrieved_concepts: List[Tuple[str, str, float]],
-    ) -> List[Dict]:
+        retrieved_concepts: list[tuple[str, str, float]],
+    ) -> list[dict]:
         """Generate explanations for multiple concepts.
 
         Args:
@@ -436,7 +445,7 @@ understand the relevance of this SNOMED concept to their search query."""
                     "name": concept_name,
                     "score": score,
                     "explanation": explanation,
-                }
+                },
             )
         return results
 
@@ -447,9 +456,9 @@ class RAGChat:
     def __init__(
         self,
         retriever: RAGRetriever,
-        explanations: Optional[RAGExplanations] = None,
+        explanations: RAGExplanations | None = None,
         max_context_turns: int = 5,
-    ):
+    ) -> None:
         """Initialize RAG chat.
 
         Args:
@@ -460,7 +469,7 @@ class RAGChat:
         self.retriever = retriever
         self.explanations = explanations
         self.max_context_turns = max_context_turns
-        self.conversation_history: List[Dict] = []
+        self.conversation_history: list[dict] = []
         self.system_prompt = (
             "You are a clinical terminology assistant helping users "
             "find and understand SNOMED CT concepts. Use RAG to provide "
@@ -471,8 +480,9 @@ class RAGChat:
         self,
         query: str,
         top_k: int = 15,
+        *,
         return_explanations: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """Process a user query and return results.
 
         Args:
@@ -509,8 +519,9 @@ class RAGChat:
     def follow_up(
         self,
         feedback: str,
+        *,
         refine_with_previous: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """Process a follow-up query or feedback.
 
         Args:
@@ -522,7 +533,7 @@ class RAGChat:
         """
         if refine_with_previous and self.conversation_history:
             context_text = " | ".join(
-                [m["content"] for m in self.conversation_history[-3:]]
+                [m["content"] for m in self.conversation_history[-3:]],
             )
             query = f"Previous: {context_text}. Current: {feedback}"
         else:

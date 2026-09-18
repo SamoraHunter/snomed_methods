@@ -1,10 +1,12 @@
 """Unit tests for term lookup benchmarking utilities."""
 
+from __future__ import annotations
+
 
 class TestTermDataset:
     """Tests for term dataset generation functionality."""
 
-    def test_generate_term_dataset_structure(self):
+    def test_generate_term_dataset_structure(self) -> None:
         """Test that generated dataset has correct structure."""
         from snomed_methods.benchmarking.term import generate_term_dataset
 
@@ -19,7 +21,7 @@ class TestTermDataset:
         assert isinstance(sample["expected_cui"], str)
         assert len(sample["term"]) > 0
 
-    def test_generate_term_dataset_with_custom_terms(self):
+    def test_generate_term_dataset_with_custom_terms(self) -> None:
         """Test custom medical terms."""
         from snomed_methods.benchmarking.term import generate_term_dataset
 
@@ -37,7 +39,7 @@ class TestTermDataset:
 class TestTermMetrics:
     """Tests for term lookup metrics."""
 
-    def test_recall_at_k_found(self):
+    def test_recall_at_k_found(self) -> None:
         """Test recall@K when CUI is found."""
         from snomed_methods.benchmarking.term import recall_at_k
 
@@ -47,7 +49,7 @@ class TestTermMetrics:
         r3 = recall_at_k(result_cuis, expected_cui, k=3)
         assert r3 == 1.0
 
-    def test_recall_at_k_not_found(self):
+    def test_recall_at_k_not_found(self) -> None:
         """Test recall@K when CUI is not found."""
         from snomed_methods.benchmarking.term import recall_at_k
 
@@ -57,7 +59,7 @@ class TestTermMetrics:
         r3 = recall_at_k(result_cuis, expected_cui, k=3)
         assert r3 == 0.0
 
-    def test_mean_reciprocal_rank_found(self):
+    def test_mean_reciprocal_rank_found(self) -> None:
         """Test MRR when CUI is found."""
         from snomed_methods.benchmarking.term import mean_reciprocal_rank
 
@@ -67,7 +69,7 @@ class TestTermMetrics:
         rr = mean_reciprocal_rank(result_cuis, expected_cui)
         assert abs(rr - 0.5) < 0.01
 
-    def test_mean_reciprocal_rank_not_found(self):
+    def test_mean_reciprocal_rank_not_found(self) -> None:
         """Test MRR when CUI is not found."""
         from snomed_methods.benchmarking.term import mean_reciprocal_rank
 
@@ -81,13 +83,13 @@ class TestTermMetrics:
 class TestEvaluateTermLookup:
     """Tests for evaluate_term_lookup function."""
 
-    def test_evaluate_with_tuple_prediction(self):
+    def test_evaluate_with_tuple_prediction(self) -> None:
         """Test evaluation with (CUI, term) tuple prediction."""
         from snomed_methods.benchmarking.term import (
             evaluate_term_lookup,
         )
 
-        def mock_lookup(term):
+        def mock_lookup(_term) -> list[tuple[str, str]]:
             return [("C001", "Matched Term"), ("C002", "Another Match")]
 
         dataset = [
@@ -99,13 +101,13 @@ class TestEvaluateTermLookup:
         assert "recall@1" in results
         assert "num_samples" in results
 
-    def test_evaluate_multiple_k_values(self):
+    def test_evaluate_multiple_k_values(self) -> None:
         """Test evaluation with multiple K values."""
         from snomed_methods.benchmarking.term import (
             evaluate_term_lookup,
         )
 
-        def mock_lookup(term):
+        def mock_lookup(_term) -> list[tuple[str, str]]:
             return [(f"C{i:03d}", f"Term {i}") for i in range(20)]
 
         dataset = [
@@ -126,14 +128,14 @@ class TestEvaluateTermLookup:
 class TestTermIntegration:
     """Integration tests for term lookup benchmarking."""
 
-    def test_full_pipeline(self):
+    def test_full_pipeline(self) -> None:
         """Test complete evaluation pipeline."""
         from snomed_methods.benchmarking.term import (
             evaluate_term_lookup,
             generate_term_dataset,
         )
 
-        def mock_lookup(term):
+        def mock_lookup(_term) -> list[tuple[str, str]]:
             return [(f"C{i:03d}", f"Matched_{i}") for i in range(15)]
 
         dataset = generate_term_dataset(num_samples=15)
@@ -145,7 +147,7 @@ class TestTermIntegration:
         assert "mrr" in results
         assert "recall@1" in results
 
-    def test_dataset_loading(self):
+    def test_dataset_loading(self) -> None:
         """Test loading pre-generated datasets."""
         from snomed_methods.benchmarking.term import load_term_datasets
 
@@ -155,7 +157,7 @@ class TestTermIntegration:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for _name, data in datasets.items():
+        for data in datasets.values():
             assert len(data) > 0
             assert "term" in data[0]
             assert "expected_cui" in data[0]
@@ -164,13 +166,13 @@ class TestTermIntegration:
 class TestTermEdgeCases:
     """Tests for edge cases in term lookup evaluation."""
 
-    def test_empty_prediction(self):
+    def test_empty_prediction(self) -> None:
         """Test with empty prediction."""
         from snomed_methods.benchmarking.term import (
             evaluate_term_lookup,
         )
 
-        def mock_lookup(term):
+        def mock_lookup(_term) -> list[tuple[str, str]]:
             return []
 
         dataset = [
@@ -181,13 +183,13 @@ class TestTermEdgeCases:
 
         assert "num_samples" in results
 
-    def test_prediction_none(self):
+    def test_prediction_none(self) -> None:
         """Test with None-like prediction."""
         from snomed_methods.benchmarking.term import (
             evaluate_term_lookup,
         )
 
-        def mock_lookup(term):
+        def mock_lookup(_term) -> list[tuple[str, str]]:
             return []
 
         dataset = [

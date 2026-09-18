@@ -14,13 +14,13 @@ from .evaluation import (
 )
 
 __all__ = [
+    "coverage_rate",
+    "evaluate_mapper",
+    "exact_match_rate",
+    "f1_at_k",
     "generate_mapping_dataset",
     "load_mapping_datasets",
-    "evaluate_mapper",
+    "mean_reciprocal_rank",
     "precision_at_k",
     "recall_at_k",
-    "coverage_rate",
-    "exact_match_rate",
-    "mean_reciprocal_rank",
-    "f1_at_k",
 ]

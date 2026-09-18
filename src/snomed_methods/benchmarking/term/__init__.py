@@ -14,13 +14,13 @@ from .evaluation import (
 )
 
 __all__ = [
-    "generate_term_dataset",
-    "load_term_datasets",
-    "evaluate_term_lookup",
-    "recall_at_k",
-    "precision_at_k",
-    "mean_reciprocal_rank",
     "average_precision",
+    "evaluate_term_lookup",
     "exact_match_at_position",
+    "generate_term_dataset",
     "hit_rate",
+    "load_term_datasets",
+    "mean_reciprocal_rank",
+    "precision_at_k",
+    "recall_at_k",
 ]

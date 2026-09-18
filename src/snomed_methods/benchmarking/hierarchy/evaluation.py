@@ -2,14 +2,18 @@
 # SPDX-License-Identifier: MIT
 """Evaluation metrics for hierarchy expansion benchmarking."""
 
-from typing import Any, List, Set
+from __future__ import annotations
 
 import numpy as np
 
 
+class _ExpansionFunc:
+    def __call__(self, seed_cui: str) -> list[str] | None: ...
+
+
 def exact_match_rate(
-    predicted_cuis: List[str],
-    expected_cuis: Set[str],
+    predicted_cuis: list[str],
+    expected_cuis: set[str],
 ) -> float:
     """Compute Exact Match Rate.
 
@@ -19,13 +23,14 @@ def exact_match_rate(
 
     Returns:
         1.0 if top-K prediction set matches expected exactly, else 0.0
+
     """
     return 1.0 if set(predicted_cuis) == expected_cuis else 0.0
 
 
 def recall_at_k(
-    predicted_cuis: List[str],
-    expected_cuis: Set[str],
+    predicted_cuis: list[str],
+    expected_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute Recall@K for hierarchy expansion.
@@ -37,6 +42,7 @@ def recall_at_k(
 
     Returns:
         Recall at K (fraction of expected items found in top-K)
+
     """
     top_k = set(predicted_cuis[:k])
     relevant_found = len(top_k & expected_cuis)
@@ -44,8 +50,8 @@ def recall_at_k(
 
 
 def precision_at_k(
-    predicted_cuis: List[str],
-    expected_cuis: Set[str],
+    predicted_cuis: list[str],
+    expected_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute Precision@K for hierarchy expansion.
@@ -57,6 +63,7 @@ def precision_at_k(
 
     Returns:
         Precision at K (fraction of top-K that are relevant)
+
     """
     top_k = set(predicted_cuis[:k])
     if not top_k:
@@ -66,8 +73,8 @@ def precision_at_k(
 
 
 def f1_at_k(
-    predicted_cuis: List[str],
-    expected_cuis: Set[str],
+    predicted_cuis: list[str],
+    expected_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute F1@K for hierarchy expansion.
@@ -79,6 +86,7 @@ def f1_at_k(
 
     Returns:
         F1 score at K
+
     """
     p = precision_at_k(predicted_cuis, expected_cuis, k)
     r = recall_at_k(predicted_cuis, expected_cuis, k)
@@ -88,8 +96,8 @@ def f1_at_k(
 
 
 def jaccard_similarity(
-    predicted_cuis: List[str],
-    expected_cuis: Set[str],
+    predicted_cuis: list[str],
+    expected_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute Jaccard similarity between predicted and expected sets.
@@ -101,6 +109,7 @@ def jaccard_similarity(
 
     Returns:
         Jaccard similarity score (intersection over union)
+
     """
     top_k = set(predicted_cuis[:k])
     intersection = len(top_k & expected_cuis)
@@ -109,9 +118,9 @@ def jaccard_similarity(
 
 
 def evaluate_hierarchy_expansion(
-    expansion_func: Any,
-    dataset: List[dict],
-    k_values: List[int] | None = None,
+    expansion_func: _ExpansionFunc,
+    dataset: list[dict],
+    k_values: list[int] | None = None,
 ) -> dict:
     """Evaluate a hierarchy expansion method on benchmark dataset.
 
@@ -128,6 +137,7 @@ def evaluate_hierarchy_expansion(
         ...     return ["C001", "C002", "C003"]
         >>> dataset = generate_hierarchy_dataset(10)
         >>> results = evaluate_hierarchy_expansion(my_expansion, dataset)
+
     """
     if k_values is None:
         k_values = [5, 10, 20]
@@ -149,7 +159,7 @@ def evaluate_hierarchy_expansion(
         else:
             try:
                 predicted_cuis = list(prediction_result)
-            except Exception:
+            except TypeError:
                 continue
 
         exact_match = 1.0 if set(predicted_cuis) == expected_related else 0.0

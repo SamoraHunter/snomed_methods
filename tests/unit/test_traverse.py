@@ -31,7 +31,10 @@ for _ in parents_df.head().iterrows():
     pass
 
 descendants_ids, descendants_names = snomed.get_subsumed_concepts(
-    meningioma_cui, include_ancestors=False, include_descendants=True, max_depth=5
+    meningioma_cui,
+    include_ancestors=False,
+    include_descendants=True,
+    max_depth=5,
 )
 for _ in enumerate(descendants_ids[:10]):
     pass

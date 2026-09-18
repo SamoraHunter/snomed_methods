@@ -2,11 +2,23 @@
 # SPDX-License-Identifier: MIT
 """Evaluation utilities for UMNSRS benchmarking."""
 
-from typing import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
-import pandas as pd
 from scipy import stats
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+if TYPE_CHECKING:
+    from typing import Protocol
+
+    class SimilarityModel(Protocol):
+        def __call__(self, text_1: str, text_2: str) -> float: ...
 
 
 def spearman_correlation(
@@ -24,11 +36,15 @@ def spearman_correlation(
 
     Raises:
         ValueError: If input lists have different lengths
+
     """
     if len(predictions) != len(references):
-        raise ValueError(
+        msg = (
             f"Predictions and references must have same length "
             f"(got {len(predictions)} vs {len(references)})"
+        )
+        raise ValueError(
+            msg,
         )
 
     corr, p_value = stats.spearmanr(predictions, references)
@@ -51,11 +67,15 @@ def pearson_correlation(
 
     Raises:
         ValueError: If input lists have different lengths
+
     """
     if len(predictions) != len(references):
-        raise ValueError(
+        msg = (
             f"Predictions and references must have same length "
             f"(got {len(predictions)} vs {len(references)})"
+        )
+        raise ValueError(
+            msg,
         )
 
     corr, p_value = stats.pearsonr(predictions, references)
@@ -75,11 +95,15 @@ def mean_absolute_error(
 
     Returns:
         Mean absolute error
+
     """
     if len(predictions) != len(references):
-        raise ValueError(
+        msg = (
             f"Predictions and references must have same length "
             f"(got {len(predictions)} vs {len(references)})"
+        )
+        raise ValueError(
+            msg,
         )
 
     return float(np.mean(np.abs(np.array(predictions) - np.array(references))))
@@ -97,11 +121,15 @@ def mean_squared_error(
 
     Returns:
         Mean squared error
+
     """
     if len(predictions) != len(references):
-        raise ValueError(
+        msg = (
             f"Predictions and references must have same length "
             f"(got {len(predictions)} vs {len(references)})"
+        )
+        raise ValueError(
+            msg,
         )
 
     return float(np.mean((np.array(predictions) - np.array(references)) ** 2))
@@ -119,6 +147,7 @@ def root_mean_squared_error(
 
     Returns:
         Root mean squared error
+
     """
     return np.sqrt(mean_squared_error(predictions, references))
 
@@ -148,6 +177,7 @@ def evaluate_model(
         ...     return 500.0
         >>> pairs = [{"text_1": "A", "text_2": "B", "label": 600.0}]
         >>> results = evaluate_model(mock_model, pairs)
+
     """
     if isinstance(metric, str):
         metric = [metric]
@@ -162,8 +192,9 @@ def evaluate_model(
 
     for m in metric:
         if m not in valid_metrics:
+            msg = f"Invalid metric '{m}'. Options: {list(valid_metrics.keys())}"
             raise ValueError(
-                f"Invalid metric '{m}'. Options: {list(valid_metrics.keys())}"
+                msg,
             )
 
     predictions = []
@@ -209,6 +240,7 @@ def precision_at_k(
 
     Returns:
         Precision at K (fraction of top-K results that are relevant)
+
     """
     top_k = predicted_cuis[:k]
     relevant_count = sum(1 for cui in top_k if cui in relevant_cuis)
@@ -229,6 +261,7 @@ def recall_at_k(
 
     Returns:
         Recall at K (fraction of relevant items found in top-K)
+
     """
     top_k = predicted_cuis[:k]
     relevant_found = sum(1 for cui in top_k if cui in relevant_cuis)
@@ -249,6 +282,7 @@ def f1_at_k(
 
     Returns:
         F1 score at K
+
     """
     p = precision_at_k(predicted_cuis, relevant_cuis, k)
     r = recall_at_k(predicted_cuis, relevant_cuis, k)
@@ -269,6 +303,7 @@ def mean_reciprocal_rank(
 
     Returns:
         Reciprocal rank of first relevant item found (0 if none found)
+
     """
     for i, cui in enumerate(predicted_cuis):
         if cui in relevant_cuis:
@@ -288,6 +323,7 @@ def average_precision(
 
     Returns:
         Average precision across all relevant items
+
     """
     if not relevant_cuis:
         return 0.0
@@ -305,7 +341,7 @@ def average_precision(
 
 def benchmark_results_to_dataframe(
     benchmark_results: list[dict],
-) -> "pd.DataFrame":
+) -> pd.DataFrame:
     """Convert benchmark results to pandas DataFrame.
 
     Args:
@@ -313,8 +349,11 @@ def benchmark_results_to_dataframe(
 
     Returns:
         pandas DataFrame with metrics as columns
+
     """
-    import pandas as pd
+    if pd is None:
+        msg = "pandas is required. Install with: pip install pandas"
+        raise ImportError(msg)
 
     if not benchmark_results:
         return pd.DataFrame()

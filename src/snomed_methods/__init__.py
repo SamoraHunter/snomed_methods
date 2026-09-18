@@ -43,52 +43,52 @@ from snomed_methods.snomed_term_lookup import (
 def _get_umls_mapper() -> dict:
     """Lazy import for UMLSCIMapper to avoid torch dependency."""
     try:
-        from snomed_methods.umlsci_mapper import (
+        from snomed_methods.umlsci_mapper import (  # noqa: PLC0415
             UMLSCIMapper,
             batch_map_to_umls,
             map_from_umls,
             map_to_umls,
         )
 
-        return {
-            "UMLSCIMapper": UMLSCIMapper,
-            "batch_map_to_umls": batch_map_to_umls,
-            "map_from_umls": map_from_umls,
-            "map_to_umls": map_to_umls,
-        }
     except ImportError:
         return {}
+    return {
+        "UMLSCIMapper": UMLSCIMapper,
+        "batch_map_to_umls": batch_map_to_umls,
+        "map_from_umls": map_from_umls,
+        "map_to_umls": map_to_umls,
+    }
 
 
 __all__ = [
+    "AnnotationResult",
+    "ClinicalConceptAnnotator",
+    "ClinicalConceptEmbedder",
+    "ConceptMapper",
+    "ConceptVectorSearch",
+    "ExpansionResult",
+    "HybridSearch",
+    "MatchedConcept",
+    "ProgressiveExpansionPipeline",
+    "SearchResult",
+    "SearchResults",
+    "SemanticSearch",
+    "SnomedConfig",
     "SnomedRelations",
     "SnomedTermLookup",
-    "create_term_lookup_from_directory",
-    "HybridSearch",
-    "SearchResult",
-    "ClinicalConceptEmbedder",
-    "ConceptVectorSearch",
-    "load_concepts_from_medcat",
-    "ExpansionResult",
-    "ProgressiveExpansionPipeline",
-    "expand_progressive",
-    "SemanticSearch",
-    "SearchResults",
-    "expand_concepts",
-    "AnnotationResult",
-    "MatchedConcept",
-    "ClinicalConceptAnnotator",
     "annotate_text",
     "batch_annotate_texts",
-    "ConceptMapper",
-    "map_concept",
     "batch_map_concepts",
-    "SnomedConfig",
+    "create_term_lookup_from_directory",
+    "expand_concepts",
+    "expand_progressive",
     "get_config",
+    "load_concepts_from_medcat",
+    "map_concept",
 ]
 
 # Add UMLSCIMapper components if available
 _umls_components = _get_umls_mapper()
-__all__.extend(_umls_components.keys())
+__all__ += list(_umls_components.keys())
 
 globals().update(_umls_components)

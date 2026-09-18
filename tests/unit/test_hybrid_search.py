@@ -17,7 +17,7 @@ from snomed_methods.hybrid_search import (
 class TestHybridSearchInit:
     """Tests for HybridSearch initialization."""
 
-    def test_init_with_default_paths(self):
+    def test_init_with_default_paths(self) -> None:
         """Test initialization with default paths."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -25,13 +25,13 @@ class TestHybridSearchInit:
         assert searcher.backend == "transformers"
         assert searcher.device == "cpu"
 
-    def test_init_with_custom_paths(self):
+    def test_init_with_custom_paths(self) -> None:
         """Test initialization with custom paths - mocked to avoid actual loading."""
         with patch("snomed_methods.hybrid_search.HybridSearch._init_embedder"):
             with patch("snomed_methods.hybrid_search.HybridSearch._init_term_lookup"):
                 with patch("snomed_methods.hybrid_search.HybridSearch._init_hierarchy"):
                     with patch(
-                        "snomed_methods.hybrid_search.HybridSearch._init_medcat"
+                        "snomed_methods.hybrid_search.HybridSearch._init_medcat",
                     ):
                         searcher = HybridSearch(
                             uk_path="/test/path",
@@ -45,13 +45,13 @@ class TestHybridSearchInit:
                         assert searcher.model_path == "/test/model"
                         assert searcher.backend == "hf"
 
-    def test_init_without_uk_path(self):
+    def test_init_without_uk_path(self) -> None:
         """Test initialization without SNOMED UK path - mocked."""
         with patch("snomed_methods.hybrid_search.HybridSearch._init_embedder"):
             with patch("snomed_methods.hybrid_search.HybridSearch._init_term_lookup"):
                 with patch("snomed_methods.hybrid_search.HybridSearch._init_hierarchy"):
                     with patch(
-                        "snomed_methods.hybrid_search.HybridSearch._init_medcat"
+                        "snomed_methods.hybrid_search.HybridSearch._init_medcat",
                     ):
                         searcher = HybridSearch()
                         assert searcher.uk_path is None
@@ -60,7 +60,7 @@ class TestHybridSearchInit:
 class TestHybridSearchTermLookup:
     """Tests for term lookup initialization and methods."""
 
-    def test_init_term_lookup_with_existing_path(self):
+    def test_init_term_lookup_with_existing_path(self) -> None:
         """Test initializing term lookup when path exists."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -71,13 +71,13 @@ class TestHybridSearchTermLookup:
         if searcher._term_lookup is not None:
             assert searcher._term_lookup is not None
 
-    def test_init_term_lookup_fallback(self):
+    def test_init_term_lookup_fallback(self) -> None:
         """Test fallback path calculation for term lookup - mocked."""
         with patch("snomed_methods.hybrid_search.HybridSearch._init_embedder"):
             with patch("snomed_methods.hybrid_search.HybridSearch._init_term_lookup"):
                 with patch("snomed_methods.hybrid_search.HybridSearch._init_hierarchy"):
                     with patch(
-                        "snomed_methods.hybrid_search.HybridSearch._init_medcat"
+                        "snomed_methods.hybrid_search.HybridSearch._init_medcat",
                     ):
                         searcher = HybridSearch()
                         assert searcher.uk_path is None
@@ -86,7 +86,7 @@ class TestHybridSearchTermLookup:
 class TestHybridSearchHierarchy:
     """Tests for hierarchy initialization and methods."""
 
-    def test_init_hierarchy_with_existing_file(self):
+    def test_init_hierarchy_with_existing_file(self) -> None:
         """Test initializing hierarchy when relationship file exists."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -102,18 +102,18 @@ class TestHybridSearchHierarchy:
 class TestHybridSearchEmbedder:
     """Tests for embedder initialization."""
 
-    def test_init_embedder_with_model_path(self):
+    def test_init_embedder_with_model_path(self) -> None:
         """Test initializing embedder with model path - mocked."""
         with patch("snomed_methods.hybrid_search.HybridSearch._init_embedder"):
             with patch("snomed_methods.hybrid_search.HybridSearch._init_term_lookup"):
                 with patch("snomed_methods.hybrid_search.HybridSearch._init_hierarchy"):
                     with patch(
-                        "snomed_methods.hybrid_search.HybridSearch._init_medcat"
+                        "snomed_methods.hybrid_search.HybridSearch._init_medcat",
                     ):
                         searcher = HybridSearch(model_path="test/model")
                         assert searcher.model_path == "test/model"
 
-    def test_init_embedder_without_model_path(self):
+    def test_init_embedder_without_model_path(self) -> None:
         """Test initializing embedder without model path."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -124,7 +124,7 @@ class TestHybridSearchEmbedder:
 class TestHybridSearchEmbeddings:
     """Tests for cached embeddings loading."""
 
-    def test_load_cached_embeddings_no_cache(self):
+    def test_load_cached_embeddings_no_cache(self) -> None:
         """Test loading when no cache exists."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -150,29 +150,29 @@ class TestHybridSearchTermSearch:
         searcher._term_lookup = mock_lookup
         return searcher
 
-    def test_term_search_basic(self, mock_searcher):
+    def test_term_search_basic(self, mock_searcher) -> None:
         """Test basic term search."""
-        results, cui_to_name = mock_searcher._term_search(["test"])
+        results, _cui_to_name = mock_searcher._term_search(["test"])
 
         assert isinstance(results, dict)
         assert len(results) >= 0
 
-    def test_term_search_empty_query(self, mock_searcher):
+    def test_term_search_empty_query(self, mock_searcher) -> None:
         """Test term search with empty query."""
         results, cui_to_name = mock_searcher._term_search([])
 
         assert len(results) == 0
         assert len(cui_to_name) == 0
 
-    def test_term_search_short_query(self, mock_searcher):
+    def test_term_search_short_query(self, mock_searcher) -> None:
         """Test term search with short query (should be skipped)."""
-        results, cui_to_name = mock_searcher._term_search(["a"])
+        results, _cui_to_name = mock_searcher._term_search(["a"])
 
         assert len(results) == 0
 
-    def test_term_search_multiple_terms(self, mock_searcher):
+    def test_term_search_multiple_terms(self, mock_searcher) -> None:
         """Test term search with multiple terms."""
-        results, cui_to_name = mock_searcher._term_search(["test", "another"])
+        results, _cui_to_name = mock_searcher._term_search(["test", "another"])
 
         assert isinstance(results, dict)
 
@@ -197,7 +197,7 @@ class TestHybridSearchHierarchySearch:
         searcher._snomed_relations = mock_relations
         return searcher
 
-    def test_hierarchy_search_basic(self, mock_searcher_with_hierarchy):
+    def test_hierarchy_search_basic(self, mock_searcher_with_hierarchy) -> None:
         """Test basic hierarchy search."""
         results, scores = mock_searcher_with_hierarchy._hierarchy_search(["1001"], 10)
 
@@ -205,14 +205,14 @@ class TestHybridSearchHierarchySearch:
         assert isinstance(scores, list)
         assert len(results) == len(scores)
 
-    def test_hierarchy_search_empty_cuis(self, mock_searcher_with_hierarchy):
+    def test_hierarchy_search_empty_cuis(self, mock_searcher_with_hierarchy) -> None:
         """Test hierarchy search with empty CUI list."""
         results, scores = mock_searcher_with_hierarchy._hierarchy_search([], 10)
 
         assert len(results) == 0
         assert len(scores) == 0
 
-    def test_hierarchy_search_no_relations(self):
+    def test_hierarchy_search_no_relations(self) -> None:
         """Test hierarchy search when no relations available."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -222,10 +222,11 @@ class TestHybridSearchHierarchySearch:
         assert len(results) == 0
         assert len(scores) == 0
 
-    def test_hierarchy_search_invalid_cui(self, mock_searcher_with_hierarchy):
+    def test_hierarchy_search_invalid_cui(self, mock_searcher_with_hierarchy) -> None:
         """Test hierarchy search with invalid CUI."""
-        results, scores = mock_searcher_with_hierarchy._hierarchy_search(
-            ["invalid"], 10
+        results, _scores = mock_searcher_with_hierarchy._hierarchy_search(
+            ["invalid"],
+            10,
         )
 
         assert isinstance(results, list)
@@ -234,7 +235,7 @@ class TestHybridSearchHierarchySearch:
 class TestHybridSearchEmbeddingSearch:
     """Tests for embedding-based search."""
 
-    def test_embedding_search_no_embedder(self):
+    def test_embedding_search_no_embedder(self) -> None:
         """Test embedding search when no embedder available."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -244,13 +245,13 @@ class TestHybridSearchEmbeddingSearch:
         assert len(results) == 0
         assert len(scores) == 0
 
-    def test_embedding_search_no_cached_embeddings(self):
+    def test_embedding_search_no_cached_embeddings(self) -> None:
         """Test embedding search with cached embeddings loading failure."""
         from snomed_methods.hybrid_search import HybridSearch
 
         searcher = HybridSearch()
 
-        results, scores = searcher._embedding_search("test", 10)
+        results, _scores = searcher._embedding_search("test", 10)
 
         assert isinstance(results, list)
 
@@ -283,7 +284,7 @@ class TestHybridSearchSemanticFilter:
 
         return searcher, result
 
-    def test_semantic_filter_disorder(self, mock_searcher):
+    def test_semantic_filter_disorder(self, mock_searcher) -> None:
         """Test filtering by disorder category."""
         searcher, result = mock_searcher
 
@@ -291,7 +292,7 @@ class TestHybridSearchSemanticFilter:
 
         assert isinstance(filtered, SearchResult)
 
-    def test_semantic_filter_finding(self, mock_searcher):
+    def test_semantic_filter_finding(self, mock_searcher) -> None:
         """Test filtering by finding category."""
         searcher, result = mock_searcher
 
@@ -299,17 +300,18 @@ class TestHybridSearchSemanticFilter:
 
         assert isinstance(filtered, SearchResult)
 
-    def test_semantic_filter_multiple_categories(self, mock_searcher):
+    def test_semantic_filter_multiple_categories(self, mock_searcher) -> None:
         """Test filtering by multiple categories."""
         searcher, result = mock_searcher
 
         filtered = searcher._apply_semantic_filter(
-            result, ["disorder", "finding", "procedure"]
+            result,
+            ["disorder", "finding", "procedure"],
         )
 
         assert isinstance(filtered, SearchResult)
 
-    def test_semantic_filter_no_matches(self, mock_searcher):
+    def test_semantic_filter_no_matches(self, mock_searcher) -> None:
         """Test filtering when no concepts match category."""
         searcher, result = mock_searcher
 
@@ -317,7 +319,7 @@ class TestHybridSearchSemanticFilter:
 
         assert isinstance(filtered, SearchResult)
 
-    def test_semantic_filter_empty_categories(self, mock_searcher):
+    def test_semantic_filter_empty_categories(self, mock_searcher) -> None:
         """Test filtering with empty categories list."""
         searcher, result = mock_searcher
 
@@ -325,7 +327,7 @@ class TestHybridSearchSemanticFilter:
 
         assert len(filtered.results) == 2
 
-    def test_semantic_filter_invalid_type_id(self, mock_searcher):
+    def test_semantic_filter_invalid_type_id(self, mock_searcher) -> None:
         """Test filtering with invalid type ID in concept info."""
         searcher, result = mock_searcher
 
@@ -344,7 +346,7 @@ class TestHybridSearchSemanticFilter:
 class TestHybridSearchRankResults:
     """Tests for result ranking."""
 
-    def test_rank_results_basic(self):
+    def test_rank_results_basic(self) -> None:
         """Test basic result ranking."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -362,7 +364,7 @@ class TestHybridSearchRankResults:
         assert len(results) == 3
         assert results[0][1] >= results[-1][1]
 
-    def test_rank_results_empty(self):
+    def test_rank_results_empty(self) -> None:
         """Test ranking with empty scores."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -372,7 +374,7 @@ class TestHybridSearchRankResults:
 
         assert len(results) == 0
 
-    def test_rank_results_partial_scores(self):
+    def test_rank_results_partial_scores(self) -> None:
         """Test ranking with partial scores (some missing)."""
         from snomed_methods.hybrid_search import HybridSearch
 
@@ -392,7 +394,7 @@ class TestHybridSearchRankResults:
 class TestSearchResult:
     """Tests for SearchResult class."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test SearchResult initialization."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -405,7 +407,7 @@ class TestSearchResult:
         assert result.hierarchy_matches == 0
         assert result.embedding_matches == 0
 
-    def test_properties_empty(self):
+    def test_properties_empty(self) -> None:
         """Test properties with empty results."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -415,7 +417,7 @@ class TestSearchResult:
         assert len(result.terms) == 0
         assert len(result.scores) == 0
 
-    def test_properties_with_data(self):
+    def test_properties_with_data(self) -> None:
         """Test properties with result data."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -430,7 +432,7 @@ class TestSearchResult:
         assert "Concept 1" in result.terms
         assert 0.9 in result.scores
 
-    def test_to_dict_empty(self):
+    def test_to_dict_empty(self) -> None:
         """Test to_dict with empty results."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -442,7 +444,7 @@ class TestSearchResult:
         assert "metrics" in d
         assert d["metrics"]["term_matches"] == 0
 
-    def test_to_dict_with_data(self):
+    def test_to_dict_with_data(self) -> None:
         """Test to_dict with result data."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -459,7 +461,7 @@ class TestSearchResult:
         assert d["metrics"]["hierarchy_matches"] == 3
         assert d["metrics"]["embedding_matches"] == 2
 
-    def test_len(self):
+    def test_len(self) -> None:
         """Test __len__ method."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -472,7 +474,7 @@ class TestSearchResult:
         ]
         assert len(result) == 2
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """Test __repr__ method."""
         from snomed_methods.hybrid_search import SearchResult
 
@@ -490,7 +492,7 @@ class TestSearchResult:
 class TestSemanticFilterResults:
     """Tests for standalone semantic_filter_results function."""
 
-    def test_standalone_function(self):
+    def test_standalone_function(self) -> None:
         """Test the standalone filter function exists."""
         result = SearchResult()
         result.results = [("C001", "Concept 1", 0.9)]
@@ -510,7 +512,7 @@ class TestSemanticFilterResults:
 class TestExpandConcepts:
     """Tests for standalone expand_concepts function."""
 
-    def test_standalone_function(self):
+    def test_standalone_function(self) -> None:
         """Test the standalone expand function exists."""
         from unittest.mock import MagicMock
 
@@ -552,14 +554,14 @@ class TestHybridSearchComplete:
 
         return searcher
 
-    def test_search_basic(self, mock_hybrid_searcher):
+    def test_search_basic(self, mock_hybrid_searcher) -> None:
         """Test basic search functionality."""
         result = mock_hybrid_searcher.search("test", top_k=5)
 
         assert hasattr(result, "results")
         assert hasattr(result, "term_matches")
 
-    def test_search_with_semantic_filter(self, mock_hybrid_searcher):
+    def test_search_with_semantic_filter(self, mock_hybrid_searcher) -> None:
         """Test search with semantic filtering."""
         result = mock_hybrid_searcher.search(
             "test",
@@ -573,13 +575,13 @@ class TestHybridSearchComplete:
 
         assert isinstance(filtered, type(result))
 
-    def test_search_top_k_zero(self, mock_hybrid_searcher):
+    def test_search_top_k_zero(self, mock_hybrid_searcher) -> None:
         """Test search with top_k=0."""
         result = mock_hybrid_searcher.search("test", top_k=0)
 
         assert len(result.results) == 0
 
-    def test_search_invalid_weights(self, mock_hybrid_searcher):
+    def test_search_invalid_weights(self, mock_hybrid_searcher) -> None:
         """Test search with invalid weights (should normalize)."""
         result = mock_hybrid_searcher.search(
             "test",
@@ -595,7 +597,7 @@ class TestHybridSearchComplete:
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
-    def test_empty_query_search(self):
+    def test_empty_query_search(self) -> None:
         """Test search with empty query string."""
         from unittest.mock import MagicMock
 
@@ -611,7 +613,7 @@ class TestEdgeCases:
 
         assert hasattr(result, "results")
 
-    def test_whitespace_query_search(self):
+    def test_whitespace_query_search(self) -> None:
         """Test search with whitespace-only query."""
         from unittest.mock import MagicMock
 
@@ -627,7 +629,7 @@ class TestEdgeCases:
 
         assert hasattr(result, "results")
 
-    def test_special_characters_query(self):
+    def test_special_characters_query(self) -> None:
         """Test search with special characters."""
         from unittest.mock import MagicMock
 

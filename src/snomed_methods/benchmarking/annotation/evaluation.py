@@ -2,14 +2,20 @@
 # SPDX-License-Identifier: MIT
 """Evaluation metrics and utilities for clinical concept annotation benchmarking."""
 
-from typing import Any, List, Set
+from __future__ import annotations
+
+from typing import Protocol
 
 import numpy as np
 
 
+class _HasTopConcepts(Protocol):
+    top_concepts: list[object]
+
+
 def precision_at_k(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute Precision@K for ranking tasks.
@@ -21,6 +27,7 @@ def precision_at_k(
 
     Returns:
         Precision at K (fraction of top-K results that are relevant)
+
     """
     top_k = predicted_cuis[:k]
     if not top_k:
@@ -30,8 +37,8 @@ def precision_at_k(
 
 
 def recall_at_k(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute Recall@K for ranking tasks.
@@ -43,6 +50,7 @@ def recall_at_k(
 
     Returns:
         Recall at K (fraction of relevant items found in top-K)
+
     """
     top_k = predicted_cuis[:k]
     if not relevant_cuis:
@@ -52,8 +60,8 @@ def recall_at_k(
 
 
 def f1_at_k(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
     k: int = 10,
 ) -> float:
     """Compute F1@K for ranking tasks.
@@ -65,6 +73,7 @@ def f1_at_k(
 
     Returns:
         F1 score at K
+
     """
     p = precision_at_k(predicted_cuis, relevant_cuis, k)
     r = recall_at_k(predicted_cuis, relevant_cuis, k)
@@ -74,8 +83,8 @@ def f1_at_k(
 
 
 def mean_reciprocal_rank(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
 ) -> float:
     """Compute Mean Reciprocal Rank (MRR).
 
@@ -85,6 +94,7 @@ def mean_reciprocal_rank(
 
     Returns:
         Reciprocal rank of first relevant item found (0 if none found)
+
     """
     for i, cui in enumerate(predicted_cuis):
         if cui in relevant_cuis:
@@ -93,17 +103,18 @@ def mean_reciprocal_rank(
 
 
 def average_precision(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
 ) -> float:
     """Compute Average Precision (AP) for ranking tasks.
 
     Args:
-        predicted_cuis: List of predicted CUIs in rank order
+       Predicted_cuis: List of predicted CUIs in rank order
         relevant_cuis: Set of relevant/ground truth CUIs
 
     Returns:
         Average precision across all relevant items
+
     """
     if not relevant_cuis:
         return 0.0
@@ -120,8 +131,8 @@ def average_precision(
 
 
 def exact_match_rate(
-    predicted_cuis: List[str],
-    relevant_cuis: Set[str],
+    predicted_cuis: list[str],
+    relevant_cuis: set[str],
 ) -> float:
     """Compute Exact Match Rate.
 
@@ -131,6 +142,7 @@ def exact_match_rate(
 
     Returns:
         1.0 if first prediction matches any relevant, else 0.0
+
     """
     if not predicted_cuis or not relevant_cuis:
         return 0.0
@@ -138,9 +150,9 @@ def exact_match_rate(
 
 
 def evaluate_annotator(
-    annotator_func: Any,
-    dataset: List[dict],
-    k_values: List[int] | None = None,
+    annotator_func: callable,
+    dataset: list[dict],
+    k_values: list[int] | None = None,
 ) -> dict:
     """Evaluate a concept annotator on annotation benchmark dataset.
 
@@ -158,6 +170,7 @@ def evaluate_annotator(
         ...     return ["C001", "C002", "C003"]
         >>> dataset = generate_annotation_dataset(10)
         >>> results = evaluate_annotator(my_annotator, dataset)
+
     """
     if k_values is None:
         k_values = [1, 3, 5, 10]
@@ -166,8 +179,8 @@ def evaluate_annotator(
     all_recalls: dict = {}
     all_f1s: dict = {}
 
-    reciprocal_ranks: List[float] = []
-    exact_matches: List[float] = []
+    reciprocal_ranks: list[float] = []
+    exact_matches: list[float] = []
 
     for sample in dataset:
         text = sample["text"]
@@ -219,32 +232,30 @@ def evaluate_annotator(
     return results
 
 
-def _extract_predicted_cuis(prediction_result: Any) -> List[str]:
-    """Extract predicted CUIs from various prediction formats."""
-    if hasattr(prediction_result, "top_concepts"):
+def _extract_predicted_cuis(
+    prediction_result: object,
+) -> list[str]:
+    if isinstance(prediction_result, _HasTopConcepts):
         return [c.concept_id for c in prediction_result.top_concepts]
     if isinstance(prediction_result, list):
         return prediction_result
     try:
         concepts_dict = getattr(prediction_result, "concepts", [])
         return [c["concept_id"] for c in concepts_dict]
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
         return []
 
 
-def benchmark_results_to_dataframe(results: dict) -> Any:
-    """Convert benchmark results to pandas DataFrame.
+try:
+    import pandas as pd
 
-    Args:
-        results: Dict from evaluate_annotator
-
-    Returns:
-        pandas DataFrame with metrics as columns
-    """
-    try:
-        import pandas as pd
-
+    def benchmark_results_to_dataframe(
+        results: dict,
+    ) -> pd.DataFrame | None:
         df = pd.DataFrame([results])
         return df.drop(columns=["num_samples"], errors="ignore")
-    except ImportError:
+
+except ImportError:
+
+    def benchmark_results_to_dataframe(_results: dict) -> None:
         return None

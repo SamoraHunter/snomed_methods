@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from src.snomed_methods import SnomedRelations
 
 
-def main():
+def main() -> int:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
     fixture_dir = os.path.join(project_root, "data", "snomed_fixtures")
@@ -28,7 +28,10 @@ def main():
     meningioma_cui = str(meningioma_matches[0][0])
 
     descendants_ids, _ = snomed.get_subsumed_concepts(
-        meningioma_cui, include_ancestors=False, include_descendants=True, max_depth=5
+        meningioma_cui,
+        include_ancestors=False,
+        include_descendants=True,
+        max_depth=5,
     )
     if len(descendants_ids) > 1:
         for _cui in descendants_ids[:5]:
@@ -37,26 +40,31 @@ def main():
         pass
 
     ancestors_ids, _ = snomed.get_subsumed_concepts(
-        meningioma_cui, include_ancestors=True, include_descendants=False, max_depth=5
+        meningioma_cui,
+        include_ancestors=True,
+        include_descendants=False,
+        max_depth=5,
     )
     if len(ancestors_ids) > 0:
         for _cui in ancestors_ids[:5]:
             lookup.getconcept_info(str(_cui))
 
     all_concepts_ids, _ = snomed.get_subsumed_concepts(
-        meningioma_cui, include_ancestors=True, include_descendants=True, max_depth=5
+        meningioma_cui,
+        include_ancestors=True,
+        include_descendants=True,
+        max_depth=5,
     )
     if len(all_concepts_ids) > 0:
         for _cui in all_concepts_ids[:10]:
             lookup.getconcept_info(str(_cui))
 
     for depth in [1, 2, 3]:
-        ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=depth)
-        pass
+        _ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=depth)
 
-    invalid_ids, _ = snomed.get_subsumed_concepts(999999999, max_depth=3)
-    neg_ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=-1)
-    zero_ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=0)
+    _invalid_ids, _ = snomed.get_subsumed_concepts(999999999, max_depth=3)
+    _neg_ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=-1)
+    _zero_ids, _ = snomed.get_subsumed_concepts(meningioma_cui, max_depth=0)
 
     return 0
 

@@ -2,7 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Plotting functions for benchmark results."""
 
+from __future__ import annotations
+
 from typing import List
+
+import pandas as pd
 
 try:
     import matplotlib.pyplot as plt
@@ -12,10 +16,10 @@ except ImportError:
 
 def plot_comparison(
     benchmark_results: dict,
-    metrics: List[str] | None = None,
+    metrics: list[str] | None = None,
     figsize: tuple[int, int] = (12, 6),
     title: str = "Benchmark Comparison",
-) -> "plt.Figure":
+) -> plt.Figure:
     """Create a bar chart comparison of benchmarks.
 
     Args:
@@ -26,13 +30,15 @@ def plot_comparison(
 
     Returns:
         matplotlib Figure object if available, otherwise None
+
     """
     if plt is None:
-        raise ImportError(
+        msg = (
             "matplotlib is required for plotting. Install with: pip install matplotlib"
         )
-
-    import pandas as pd
+        raise ImportError(
+            msg,
+        )
 
     df = pd.DataFrame.from_dict(benchmark_results, orient="index")
     if "num_samples" in df.columns:
@@ -43,7 +49,8 @@ def plot_comparison(
         metrics = [c for c in numeric_cols if "p_value" not in c]
 
     if not metrics:
-        raise ValueError("No numeric metrics found to plot")
+        msg = "No numeric metrics found to plot"
+        raise ValueError(msg)
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -78,7 +85,7 @@ def plot_metric_distribution(
     metric: str,
     figsize: tuple[int, int] = (10, 6),
     title: str | None = None,
-) -> "plt.Figure":
+) -> plt.Figure:
     """Plot distribution of a specific metric across benchmarks.
 
     Args:
@@ -89,13 +96,15 @@ def plot_metric_distribution(
 
     Returns:
         matplotlib Figure object if available, otherwise None
+
     """
     if plt is None:
-        raise ImportError(
+        msg = (
             "matplotlib is required for plotting. Install with: pip install matplotlib"
         )
-
-    import pandas as pd
+        raise ImportError(
+            msg,
+        )
 
     if title is None:
         title = f"{metric} Distribution"
@@ -105,7 +114,8 @@ def plot_metric_distribution(
         df = df.drop(columns=["num_samples"])
 
     if metric not in df.columns:
-        raise ValueError(f"Metric '{metric}' not found. Available: {list(df.columns)}")
+        msg = f"Metric '{metric}' not found. Available: {list(df.columns)}"
+        raise ValueError(msg)
 
     fig, ax = plt.subplots(figsize=figsize)
 

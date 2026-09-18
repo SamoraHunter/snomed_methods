@@ -1,5 +1,7 @@
 """Unit tests for annotation benchmarking utilities."""
 
+from __future__ import annotations
+
 
 class TestAnnotationDataset:
     """Tests for annotation dataset generation functionality."""
@@ -113,7 +115,7 @@ class TestEvaluateAnnotator:
             evaluate_annotator,
         )
 
-        def mock_annotator(text):
+        def mock_annotator(_text: str) -> list[str]:
             return ["C001", "C002"]
 
         dataset = [
@@ -132,15 +134,15 @@ class TestEvaluateAnnotator:
         )
 
         class MockMatchedConcept:
-            def __init__(self, concept_id):
+            def __init__(self, concept_id) -> None:
                 self.concept_id = concept_id
 
         class MockAnnotationResult:
             @property
-            def top_concepts(self):
+            def top_concepts(self) -> list[MockMatchedConcept]:
                 return [MockMatchedConcept("C001"), MockMatchedConcept("C002")]
 
-        def mock_annotator(text):
+        def mock_annotator(_text: str) -> MockAnnotationResult:
             return MockAnnotationResult()
 
         dataset = [
@@ -158,7 +160,7 @@ class TestEvaluateAnnotator:
             evaluate_annotator,
         )
 
-        def mock_annotator(text):
+        def mock_annotator(_text: str) -> list[str]:
             return ["C001", "C002", "C003", "C004", "C005"]
 
         dataset = [
@@ -186,7 +188,7 @@ class TestLoadAnnotationDatasets:
         assert "medium" in datasets
         assert "large" in datasets
 
-        for _name, data in datasets.items():
+        for data in datasets.values():
             assert len(data) > 0
             sample = data[0]
             assert "text" in sample
@@ -203,9 +205,9 @@ class TestAnnotationIntegration:
             generate_annotation_dataset,
         )
 
-        def mock_annotator(text):
+        def mock_annotator(_text: str) -> list[str]:
             # Simple mock that returns CUIs based on text length
-            return [f"C{i:03d}" for i in range(min(10, len(text) // 5 + 2))]
+            return [f"C{i:03d}" for i in range(min(10, len(_text) // 5 + 2))]
 
         dataset = generate_annotation_dataset(num_samples=20)
 
@@ -217,27 +219,19 @@ class TestAnnotationIntegration:
         assert "f1@1" in results
         assert "mrr" in results
 
-    def test_dataset_caching(self):
+    def test_dataset_caching(self, tmp_path):
         """Test that datasets can be saved/loaded."""
-        import os
-        import shutil
-
         from snomed_methods.benchmarking.annotation import (
             generate_annotation_dataset,
         )
 
-        cache_dir = "/tmp/test_annotation_cache"
-        os.makedirs(cache_dir, exist_ok=True)
+        cache_dir = tmp_path / "test_annotation_cache"
+        cache_dir.mkdir()
 
-        try:
-            # Generate and save
-            dataset1 = generate_annotation_dataset(num_samples=5)
-            datasets = {
-                "test": dataset1,
-            }
+        # Generate and save
+        dataset1 = generate_annotation_dataset(num_samples=5)
+        datasets = {
+            "test": dataset1,
+        }
 
-            assert len(datasets["test"]) == 5
-
-        finally:
-            if os.path.exists(cache_dir):
-                shutil.rmtree(cache_dir)
+        assert len(datasets["test"]) == 5

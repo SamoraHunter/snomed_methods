@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Dataset generation and loading for clinical concept annotation benchmarking."""
 
+from __future__ import annotations
+
+import pathlib
 import random
-from typing import List, Optional
+from pathlib import Path
 
 try:
     from datasets import DatasetDict
@@ -13,11 +16,19 @@ except ImportError:
         pass
 
 
+SMALL_SIZE = 25
+MEDIUM_SIZE = 100
+LARGE_SIZE = 500
+
+CACHE_DIR = Path(__file__).parent.parent / "cache"
+ANNOTATION_CACHE_DIR = CACHE_DIR / "annotation_datasets"
+
+
 def generate_annotation_dataset(
     num_samples: int = 100,
-    cui_vocab: Optional[List[str]] = None,
-    diseases: Optional[List[tuple]] = None,
-) -> List[dict]:
+    cui_vocab: list[str] | None = None,
+    diseases: list[tuple] | None = None,
+) -> list[dict]:
     """Generate synthetic clinical note dataset for annotation benchmarking.
 
     Creates realistic clinical text and gold-standard CUI annotations based on
@@ -30,6 +41,7 @@ def generate_annotation_dataset(
 
     Returns:
         List of dicts with keys: 'text', 'gold_cuis'
+
     """
     if diseases is None:
         diseases = [
@@ -88,13 +100,13 @@ def generate_annotation_dataset(
                 "text": text,
                 "gold_cuis": gold_cuis.copy(),
                 "disease_name": disease_name,
-            }
+            },
         )
 
     return results
 
 
-def load_annotation_datasets(cache_dir: Optional[str] = None) -> dict:
+def load_annotation_datasets(cache_dir: str | None = None) -> dict:
     """Load pre-generated annotation datasets or generate new ones.
 
     Args:
@@ -102,24 +114,21 @@ def load_annotation_datasets(cache_dir: Optional[str] = None) -> dict:
 
     Returns:
         Dict with dataset names as keys and lists of samples
+
     """
-    import os
-
     if cache_dir is None:
-        cache_dir = os.path.join(
-            os.path.dirname(__file__), "..", "cache", "annotation_datasets"
-        )
+        cache_dir = ANNOTATION_CACHE_DIR
 
-    os.makedirs(cache_dir, exist_ok=True)
+    pathlib.Path(cache_dir).mkdir(exist_ok=True, parents=True)
 
     return {
-        "small": generate_annotation_dataset(num_samples=25),
-        "medium": generate_annotation_dataset(num_samples=100),
-        "large": generate_annotation_dataset(num_samples=500),
+        "small": generate_annotation_dataset(num_samples=SMALL_SIZE),
+        "medium": generate_annotation_dataset(num_samples=MEDIUM_SIZE),
+        "large": generate_annotation_dataset(num_samples=LARGE_SIZE),
     }
 
 
-def create_dataset_from_concepts(concept_list: List[tuple]) -> List[dict]:
+def create_dataset_from_concepts(concept_list: list[tuple]) -> list[dict]:
     """Create annotation dataset from list of (text, [cuis]) tuples.
 
     Args:
@@ -127,5 +136,6 @@ def create_dataset_from_concepts(concept_list: List[tuple]) -> List[dict]:
 
     Returns:
         List of dicts with 'text' and 'gold_cuis' keys
+
     """
     return [{"text": text, "gold_cuis": cuis} for text, cuis in concept_list]

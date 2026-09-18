@@ -1,25 +1,45 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 SNOMED Methods Contributors
 # SPDX-License-Identifier: MIT
-"""SNOMED CT Term Lookup Module
+"""SNOMED CT Term Lookup Module.
 
 This module provides functionality for searching SNOMED CT concepts by term.
 """
 
+from __future__ import annotations
+
 import os
+import pathlib
 import sys
-from typing import Any, List, Optional, Tuple
+from pathlib import Path
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    from rapidfuzz import fuzz, process
+except ImportError:
+    fuzz = None
+    process = None
 
 
 class SnomedTermLookup:
     """Lookup SNOMED CT concepts by term."""
 
-    def __init__(self, snomed_description_path: str = None, active_only: bool = True):
+    def __init__(
+        self,
+        snomed_description_path: str | None = None,
+        *,
+        active_only: bool = True,
+    ) -> None:
         """Initialize with a SNOMED description file.
 
         Args:
             snomed_description_path: Path to sct2_Description_*.txt file
             active_only: If True, only include active concepts (default True)
+
         """
         self.snomed_description_path = snomed_description_path
         self.active_only = active_only
@@ -27,7 +47,9 @@ class SnomedTermLookup:
 
     def _load_data(self) -> None:
         """Load SNOMED description data from file."""
-        import pandas as pd
+        if pd is None:
+            msg = "pandas is required but not installed"
+            raise ImportError(msg)
 
         if self.snomed_description_path is None:
             self.df = None
@@ -75,10 +97,11 @@ class SnomedTermLookup:
     def find_concepts_by_term(
         self,
         term: str,
+        *,
         ignore_case: bool = True,
         match_prefix: bool = False,
-        top_n: Optional[int] = None,
-    ) -> List[Tuple[str, str]]:
+        top_n: int | None = None,
+    ) -> list[tuple[str, str]]:
         """Find concepts by matching a term.
 
         Args:
@@ -89,6 +112,7 @@ class SnomedTermLookup:
 
         Returns:
             List of tuples (cui, term) for each match
+
         """
         if self.df is None or len(self.df) == 0:
             return []
@@ -110,20 +134,19 @@ class SnomedTermLookup:
             else:
                 # Use regex=False for literal string matching
                 mask = term_col_lower.str.contains(search_str_lower, regex=False)
+        # Case-sensitive matching - use original strings directly
+        elif match_prefix:
+            mask = search_df["term"].str.startswith(term)
         else:
-            # Case-sensitive matching - use original strings directly
-            if match_prefix:
-                mask = search_df["term"].str.startswith(term)
-            else:
-                # For case-sensitive substring match without regex,
-                # check each row explicitly to ensure true literal behavior
-                target = term
-                mask = []
-                for val in search_df["term"]:
-                    if val is None or (isinstance(val, float) and str(val) == "nan"):
-                        mask.append(False)
-                    else:
-                        mask.append(target in str(val))
+            # For case-sensitive substring match without regex,
+            # check each row explicitly to ensure true literal behavior
+            target = term
+            mask = []
+            for val in search_df["term"]:
+                if val is None or (isinstance(val, float) and str(val) == "nan"):
+                    mask.append(False)
+                else:
+                    mask.append(target in str(val))
 
         results = search_df[mask]
 
@@ -138,15 +161,15 @@ class SnomedTermLookup:
             zip(
                 results[self.cui_column].astype(str).tolist(),
                 results["term"].tolist(),
-            )
+            ),
         )
 
     def find_concepts_by_term_fuzzy(
         self,
         term: str,
         min_score: int = 50,
-        top_n: Optional[int] = None,
-    ) -> List[Tuple[str, str, int]]:
+        top_n: int | None = None,
+    ) -> list[tuple[str, str, int]]:
         """Find concepts using fuzzy string matching.
 
         Args:
@@ -157,13 +180,12 @@ class SnomedTermLookup:
         Returns:
             List of tuples (_cui, _term, _score).
             Returns empty list if rapidfuzz not installed.
+
         """
-        if self.df is None or len(self.df) == 0:
+        if fuzz is None or process is None:
             return []
 
-        try:
-            from rapidfuzz import fuzz, process
-        except ImportError:
+        if self.df is None or len(self.df) == 0:
             return []
 
         df_with_terms = self.df.dropna(subset=["term"])
@@ -189,10 +211,11 @@ class SnomedTermLookup:
 
     def find_concepts_batch(
         self,
-        terms: List[str],
+        terms: list[str],
+        *,
         ignore_case: bool = True,
         match_prefix: bool = False,
-    ) -> List[Tuple[str, str, str]]:
+    ) -> list[tuple[str, str, str]]:
         """Search for multiple terms at once.
 
         Args:
@@ -202,18 +225,21 @@ class SnomedTermLookup:
 
         Returns:
             List of tuples (term, cui, matched_term)
+
         """
         results = []
         for term in terms:
             matches = self.find_concepts_by_term(
-                term, ignore_case=ignore_case, match_prefix=match_prefix
+                term,
+                ignore_case=ignore_case,
+                match_prefix=match_prefix,
             )
             if matches:
                 cui, matched_term = matches[0]
                 results.append((term, cui, matched_term))
         return results
 
-    def getconcept_info(self, cui: str) -> Optional[dict]:
+    def getconcept_info(self, cui: str) -> dict | None:
         """Get detailed information about a concept.
 
         Args:
@@ -221,6 +247,7 @@ class SnomedTermLookup:
 
         Returns:
             Dictionary with concept details, or None if not found
+
         """
         if self.df is None:
             return None
@@ -237,7 +264,7 @@ class SnomedTermLookup:
             "concept_id": str(row[self.cui_column].iloc[0]),
         }
 
-        # Add available columns with snake_case keys  # noqa: E501
+        # Add available columns with snake_case keys
         column_mapping = {
             "term": "preferred_name",
             "typeId": "type_id",
@@ -252,7 +279,9 @@ class SnomedTermLookup:
 
 
 def create_term_lookup_from_directory(
-    sct2_dir: str, active_only: bool = True
+    sct2_dir: str,
+    *,
+    active_only: bool = True,
 ) -> SnomedTermLookup:
     """Create a SnomedTermLookup from a SNOMED directory.
 
@@ -267,31 +296,29 @@ def create_term_lookup_from_directory(
 
     Raises:
         FileNotFoundError: If description file not found
-    """
-    import glob
 
-    search_pattern = os.path.join(sct2_dir, "**", "sct2_Description_*.txt")
-    files = glob.glob(search_pattern, recursive=True)
+    """
+    Path(sct2_dir) / "**" / "sct2_Description_*.txt"
+    files = list(Path(sct2_dir).rglob("sct2_Description_*.txt"))
 
     if len(files) == 0:
-        raise FileNotFoundError(
+        msg = (
             f"Description file not found in {sct2_dir}. "
             f"Expected file matching sct2_Description_*.txt"
+        )
+        raise FileNotFoundError(
+            msg,
         )
 
     return SnomedTermLookup(files[0], active_only=active_only)
 
 
-def main() -> Any:
+def main() -> int:
     """Run demo and return result count."""
-    import sys
-
-    default_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "uk_sct2cl_42.2.0"
-    )
+    default_dir = Path(__file__).resolve().parents[1] / "uk_sct2cl_42.2.0"
     snomed_dir = os.environ.get("SNOMED_DIR", default_dir)
 
-    if not os.path.exists(snomed_dir):
+    if not pathlib.Path(snomed_dir).exists():
         sys.exit(1)
 
     demo_term_lookup = create_term_lookup_from_directory(snomed_dir)

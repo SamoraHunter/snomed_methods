@@ -7,7 +7,7 @@ import pytest
 class TestUMLSCIMapperAdditional:
     """Additional tests for UMLSCIMapper coverage."""
 
-    def test_process_mapping_row_active_false(self):
+    def test_process_mapping_row_active_false(self) -> None:
         """Test processing inactive mapping row."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -20,7 +20,7 @@ class TestUMLSCIMapperAdditional:
         result = mapper._process_mapping_row(mock_row, "/fake/file.map")
         assert result is None
 
-    def test_process_mapping_row_invalid_umls(self):
+    def test_process_mapping_row_invalid_umls(self) -> None:
         """Test processing with non-UMLS CUI target."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -33,7 +33,7 @@ class TestUMLSCIMapperAdditional:
         result = mapper._process_mapping_row(mock_row, "/fake/file.map")
         assert result is None
 
-    def test_process_mapping_row_valid(self):
+    def test_process_mapping_row_valid(self) -> None:
         """Test processing valid mapping row."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -49,7 +49,7 @@ class TestUMLSCIMapperAdditional:
         assert snomed_cui == "12345"
         assert mapping["umls_cui"] == "C0001234"
 
-    def test_add_mapping_duplicate(self):
+    def test_add_mapping_duplicate(self) -> None:
         """Test adding duplicate mapping."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -60,7 +60,7 @@ class TestUMLSCIMapperAdditional:
         assert result1 is not None
         assert result2 is None
 
-    def test_is_umls_cui_valid(self):
+    def test_is_umls_cui_valid(self) -> None:
         """Test valid UMLS CUI detection."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -68,7 +68,7 @@ class TestUMLSCIMapperAdditional:
         assert mapper._is_umls_cui("C0001234") is True
         assert mapper._is_umls_cui("C9999999") is True
 
-    def test_is_umls_cui_invalid(self):
+    def test_is_umls_cui_invalid(self) -> None:
         """Test invalid UMLS CUI detection."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -81,7 +81,7 @@ class TestUMLSCIMapperAdditional:
 class TestUMLSCIMapperBidirectional:
     """Tests for bidirectional mapping."""
 
-    def test_bidirectional_map_empty_source(self):
+    def test_bidirectional_map_empty_source(self) -> None:
         """Test bidirectional with empty source."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -94,7 +94,7 @@ class TestUMLSCIMapperBidirectional:
 class TestUMLSCIMapperConvenience:
     """Tests for convenience functions."""
 
-    def test_batch_map_to_umls_empty(self):
+    def test_batch_map_to_umls_empty(self) -> None:
         """Test batch mapping with empty list."""
         from snomed_methods.umlsci_mapper import batch_map_to_umls
 

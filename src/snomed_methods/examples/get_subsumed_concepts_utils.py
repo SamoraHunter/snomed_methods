@@ -7,60 +7,59 @@ Utility functions for working with get_subsumed_concepts()
 This module wraps the SNOMED CT complexity to provide simple, intuitive APIs.
 """
 
+from __future__ import annotations
+
 import os
+from pathlib import Path
 
 
 def _get_snomed_path() -> str:
     """Get the default SNOMED relationship data path."""
     # Try multiple paths relative to different locations
     possible_paths = [
-        os.path.join(
-            "uk_sct2cl_42.2.0",
-            "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-            "Full",
-            "Terminology",
-            "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
-        ),
+        Path("uk_sct2cl_42.2.0")
+        / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z"
+        / "Full"
+        / "Terminology"
+        / "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
     ]
 
     # Try from different working directories (relative to module location)
     for base_dir in [
-        os.getcwd(),
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "..",
-        ),
+        Path.cwd(),
+        Path(__file__).resolve().parent.parent,
+        Path(__file__).resolve().parent.parent.parent,
     ]:
         for rel_path in possible_paths:
-            path = os.path.join(base_dir, rel_path)
-            if os.path.exists(path):
-                return path
+            path = base_dir / rel_path
+            if path.exists():
+                return str(path)
 
     # Try environment variable
     env_path = os.environ.get("SNOMED_RF2_PATH")
-    if env_path and os.path.exists(env_path):
+    if env_path and Path(env_path).exists():
         return env_path
 
+    msg = "SNOMED RF2 file not found. Set SNOMED_RF2_PATH environment variable."
     raise FileNotFoundError(
-        "SNOMED RF2 file not found. Set SNOMED_RF2_PATH environment variable."
+        msg,
     )
 
 
 def _get_lookup() -> object:
     """Get a SNOMED term lookup instance."""
-    from snomed_term_lookup import create_term_lookup_from_directory
+    from snomed_term_lookup import create_term_lookup_from_directory  # noqa: PLC0415
 
     # Get the UK Clinical data directory (one level up from relationships file)
     relationship_path = _get_snomed_path()
-    uk_data_dir = os.path.dirname(os.path.dirname(relationship_path))
+    uk_data_dir = Path(relationship_path).parent.parent
 
-    return create_term_lookup_from_directory(uk_data_dir)
+    return create_term_lookup_from_directory(str(uk_data_dir))
 
 
 def _get_snomed_reader() -> object:
     """Get a SNOMED relations reader instance."""
-    from snomed_methods_v1 import SnomedRelations
+    from snomed_methods.snomed_methods_v1 import SnomedRelations  # noqa: PLC0415
 
     return SnomedRelations(snomed_rf2_full_path=_get_snomed_path(), medcat=False)
 
@@ -83,13 +82,15 @@ def find_concept_cui(term: str, top_n: int = 5) -> tuple[str, str]:
     matches = lookup.find_concepts_by_term(term, top_n=top_n)
 
     if not matches:
-        raise ValueError(f"No concepts found for term: {term}")
+        msg = f"No concepts found for term: {term}"
+        raise ValueError(msg)
 
     return str(matches[0][0]), matches[0][1]
 
 
 def get_subsumed_concepts_for_terms(
     terms: list[str],
+    *,
     max_depth: int = 5,
     include_ancestors: bool = False,
     include_descendants: bool = True,
@@ -118,7 +119,7 @@ def get_subsumed_concepts_for_terms(
     all_concept_ids = set()
 
     for term in terms:
-        cui, preferred_name = find_concept_cui(term, top_n=1)
+        cui, _preferred_name = find_concept_cui(term, top_n=1)
 
         concept_ids, _ = snomed.get_subsumed_concepts(
             cui,
@@ -145,6 +146,7 @@ def get_subsumed_concepts_for_terms(
 # Backward compatible wrapper
 def get_subsumed_concepts_for_term(
     term: str,
+    *,
     max_depth: int = 5,
     include_ancestors: bool = False,
     include_descendants: bool = True,
@@ -163,7 +165,7 @@ def get_subsumed_concepts_for_term(
     """
     snomed = _get_snomed_reader()
 
-    cui, preferred_name = find_concept_cui(term, top_n=1)
+    cui, _preferred_name = find_concept_cui(term, top_n=1)
 
     return snomed.get_subsumed_concepts(
         cui,

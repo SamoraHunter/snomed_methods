@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 # Copyright (c) 2026 SNOMED Methods Contributors
 # SPDX-License-Identifier: MIT
-"""
-Clinical Concept Annotator Module
+"""Clinical Concept Annotator Module.
 
 Maps free-text clinical notes to SNOMED CT concepts with evidence tracking.
 
@@ -10,19 +8,48 @@ Enables EHR integration by converting patient narratives, clinical notes,
 and other free-text inputs into structured SNOMED CT concepts.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+import dataclasses
+import re
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from snomed_methods.hybrid_search import HybridSearch
+
+
+@dataclasses.dataclass
+class _AnnotatorConfig:
+    """Configuration for ClinicalConceptAnnotator."""
+
+    uk_path: str | None = None
+    model_path: str | None = None
+    backend: str = "transformers"
+    device: str = "cpu"
+
+
+class HybridSearch:
+    """Stub class for Lazy loading."""
+
+
+try:
+    from snomed_methods.hybrid_search import HybridSearch as _HybridSearch
+except ImportError:
+    _HybridSearch = None
+
+_MAX_SHORT_TEXT_WORDS = 5
 
 
 class AnnotationResult:
     """Container for annotation results with evidence tracking."""
 
-    def __init__(self):
-        self.concept_matches: List[MatchedConcept] = []
-        self.evidence_trail: Dict[str, any] = {}
-        self.text_terms: List[Tuple[str, float]] = []
+    def __init__(self) -> None:
+        self.concept_matches: list[MatchedConcept] = []
+        self.evidence_trail: dict[str, any] = {}
+        self.text_terms: list[tuple[str, float]] = []
 
     @property
-    def concepts(self) -> List["MatchedConcept"]:
+    def concepts(self) -> list[MatchedConcept]:
         return sorted(
             self.concept_matches,
             key=lambda c: c.total_score,
@@ -30,7 +57,7 @@ class AnnotationResult:
         )
 
     @property
-    def top_concepts(self) -> List["MatchedConcept"]:
+    def top_concepts(self) -> list[MatchedConcept]:
         """Return top 10 matched concepts."""
         return self.concepts[:10]
 
@@ -63,16 +90,16 @@ class MatchedConcept:
         self,
         concept_id: str,
         concept_name: str,
-    ):
+    ) -> None:
         self.concept_id = concept_id
         self.concept_name = concept_name
-        self.term_scores: Dict[str, float] = {}
+        self.term_scores: dict[str, float] = {}
         self.hierarchy_score: float = 0.0
         self.embedding_score: float = 0.0
         self.total_score: float = 0.0
 
     @property
-    def best_term(self) -> Optional[Tuple[str, float]]:
+    def best_term(self) -> tuple[str, float] | None:
         """Return the term with highest match score."""
         if not self.term_scores:
             return None
@@ -128,11 +155,11 @@ class ClinicalConceptAnnotator:
 
     def __init__(
         self,
-        uk_path: Optional[str] = None,
-        model_path: Optional[str] = None,
+        uk_path: str | None = None,
+        model_path: str | None = None,
         backend: str = "transformers",
         device: str = "cpu",
-    ):
+    ) -> None:
         """Initialize annotator with data paths.
 
         Args:
@@ -140,6 +167,7 @@ class ClinicalConceptAnnotator:
             model_path: Path to embedding model (e.g., SapBERT)
             backend: Embedding backend ("transformers", "hf", or "ollama")
             device: Device for embeddings ("cpu" or "cuda")
+
         """
         self.uk_path = uk_path
         self.model_path = model_path
@@ -150,26 +178,19 @@ class ClinicalConceptAnnotator:
         self._term_lookup = None
         self._embedder = None
 
-    def _get_hybrid_search(self) -> Any:
+    def _get_hybrid_search(self) -> object | None:
         """Get or create HybridSearch instance."""
-        if self._hybrid_search is None:
-            try:
-                from snomed_methods import HybridSearch
-
-                self._hybrid_search = HybridSearch(
-                    uk_path=self.uk_path,
-                    model_path=self.model_path,
-                    backend=self.backend,
-                    device=self.device,
-                )
-            except ImportError:
-                pass
+        if self._hybrid_search is None and _HybridSearch is not None:
+            self._hybrid_search = _HybridSearch(
+                uk_path=self.uk_path,
+                model_path=self.model_path,
+                backend=self.backend,
+                device=self.device,
+            )
         return self._hybrid_search
 
-    def _preprocess_text(self, text: str) -> List[str]:
+    def _preprocess_text(self, text: str) -> list[str]:
         """Preprocess clinical text and extract key terms."""
-        import re
-
         if not text or not isinstance(text, str):
             return []
 
@@ -179,24 +200,27 @@ class ClinicalConceptAnnotator:
         # Extract clinical terms (words ≥ 3 chars)
         words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
 
-        if len(words) <= 5:
+        if len(words) <= _MAX_SHORT_TEXT_WORDS:
             return words
 
         # For longer texts, extract n-grams and key terms
-        ngrams = []
-        for i in range(min(len(words) - 1, 0), min(len(words), 3)):
-            if i + 2 <= len(words):
-                ngrams.append(" ".join(words[i : i + 2]))
+        ngrams = [
+            " ".join(words[i : i + 2])
+            for i in range(min(len(words) - 1, 0), min(len(words), 3))
+            if i + 2 <= len(words)
+        ]
 
         # Add unigrams that are clinical-ish (no numbers/symbols)
-        keywords = [w for w in words if len(w) >= 4]
+        keywords = [w for w in words if len(w) >= _MAX_SHORT_TEXT_WORDS]
 
         # Combine and deduplicate
         return list(dict.fromkeys(ngrams + keywords))[:10]
 
     def _score_concepts_from_terms(
-        self, concepts: Dict[str, str], text_terms: List[str]
-    ) -> Dict[str, MatchedConcept]:
+        self,
+        concepts: dict[str, str],
+        text_terms: list[str],
+    ) -> dict[str, MatchedConcept]:
         """Score SNOMED concepts based on term matching."""
         scored = {}
 
@@ -236,6 +260,7 @@ class ClinicalConceptAnnotator:
 
         Returns:
             AnnotationResult with matched concepts and evidence
+
         """
         result = AnnotationResult()
 
@@ -249,15 +274,7 @@ class ClinicalConceptAnnotator:
         if not text_terms:
             return result
 
-        # Use hybrid search to find related concepts
-        _hybrid_search = None
-        hybrid_search_available = None
-        try:
-            from snomed_methods import HybridSearch
-
-            hybrid_search_available = HybridSearch
-        except ImportError:
-            pass
+        hybrid_search_available: object | None = _HybridSearch
 
         if hybrid_search_available is None and self._hybrid_search is None:
             return result
@@ -275,7 +292,7 @@ class ClinicalConceptAnnotator:
                 hierarchy_weight=0.2,
                 embedding_weight=0.2,
             )
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
             return result
 
         # Score concepts based on term matches
@@ -285,7 +302,7 @@ class ClinicalConceptAnnotator:
         )
 
         # Compute scores and build results
-        for _concept_id, concept in scored_concepts.items():
+        for concept in scored_concepts.values():
             concept.compute_total_score()
             result.concept_matches.append(concept)
 
@@ -303,10 +320,10 @@ class ClinicalConceptAnnotator:
 
     def batch_annotate(
         self,
-        texts: List[str],
+        texts: list[str],
         top_k: int = 10,
         max_concepts: int = 50,
-    ) -> Dict[str, AnnotationResult]:
+    ) -> dict[str, AnnotationResult]:
         """Annotate multiple texts.
 
         Args:
@@ -316,23 +333,27 @@ class ClinicalConceptAnnotator:
 
         Returns:
             Dictionary mapping input index or preview to result
+
         """
+        results_key_max_length = 10
+
         results = {}
 
         for i, text in enumerate(texts):
-            key = f"text_{i}" if len(str(i)) < 10 else text[:20] + "..."
+            key = (
+                f"text_{i}"
+                if len(str(i)) < results_key_max_length
+                else text[:20] + "..."
+            )
             results[key] = self.annotate(text, top_k=top_k, max_concepts=max_concepts)
 
         return results
 
 
 def annotate_text(
+    *,
     text: str,
-    uk_path: Optional[str] = None,
-    model_path: Optional[str] = None,
-    backend: str = "transformers",
-    device: str = "cpu",
-    top_k: int = 10,
+    **config: dict[str, Any],
 ) -> AnnotationResult:
     """Convenience function to annotate clinical text.
 
@@ -346,41 +367,33 @@ def annotate_text(
 
     Returns:
         AnnotationResult with matched concepts
+
     """
-    annotator = ClinicalConceptAnnotator(
-        uk_path=uk_path,
-        model_path=model_path,
-        backend=backend,
-        device=device,
-    )
-    return annotator.annotate(text, top_k=top_k)
+    annotator = ClinicalConceptAnnotator(**config)
+    return annotator.annotate(text, top_k=config.get("top_k", 10))
 
 
 def batch_annotate_texts(
-    texts: List[str],
-    uk_path: Optional[str] = None,
-    model_path: Optional[str] = None,
-    backend: str = "transformers",
-    device: str = "cpu",
+    *,
+    texts: list[str],
+    config: _AnnotatorConfig | None = None,
     top_k: int = 10,
-) -> Dict[str, AnnotationResult]:
+) -> dict[str, AnnotationResult]:
     """Annotate multiple clinical texts.
 
     Args:
         texts: List of clinical texts
-        uk_path: Path to UK Clinical RF2 directory
-        model_path: Path to embedding model
-        backend: Embedding backend
-        device: Device for embeddings
+        config: Annotator configuration (optional)
         top_k: Number of results per text
 
     Returns:
         Dictionary mapping indexes to AnnotationResults
+
     """
     annotator = ClinicalConceptAnnotator(
-        uk_path=uk_path,
-        model_path=model_path,
-        backend=backend,
-        device=device,
+        uk_path=config.uk_path if config else None,
+        model_path=config.model_path if config else None,
+        backend=config.backend if config else "transformers",
+        device=config.device if config else "cpu",
     )
     return annotator.batch_annotate(texts, top_k=top_k)

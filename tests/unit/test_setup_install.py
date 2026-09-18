@@ -1,5 +1,4 @@
-"""
-Unit tests for the setup.install module.
+"""Unit tests for the setup.install module.
 
 This module provides comprehensive test coverage for SNOMED installation
 functions including:
@@ -21,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -35,8 +35,7 @@ from setup.install import (
 
 
 class TestCreateVenv:
-    """
-    Tests for the create_venv function.
+    """Tests for the create_venv function.
 
     The create_venv function creates isolated Python virtual environments.
 
@@ -49,9 +48,8 @@ class TestCreateVenv:
     deployments without affecting the system Python installation.
     """
 
-    def test_create_venv_success(self, mocker):
-        """
-        Test successful virtual environment creation.
+    def test_create_venv_success(self, mocker) -> None:
+        """Test successful virtual environment creation.
 
         Expected behavior: subprocess.run called with correct arguments.
 
@@ -78,9 +76,8 @@ class TestCreateVenv:
             assert "-m" in call_args
             assert "venv" in call_args
 
-    def test_create_venv_already_exists(self, mocker):
-        """
-        Test that existing venv returns True without re-creating.
+    def test_create_venv_already_exists(self, mocker) -> None:
+        """Test that existing venv returns True without re-creating.
 
         Expected behavior: Returns True and does NOT call subprocess.run.
 
@@ -101,9 +98,8 @@ class TestCreateVenv:
             assert result is True
             mock_run.assert_not_called()
 
-    def test_create_venv_returns_true_on_success(self, mocker):
-        """
-        Test that create_venv returns True on successful creation.
+    def test_create_venv_returns_true_on_success(self, mocker) -> None:
+        """Test that create_venv returns True on successful creation.
 
         Expected behavior: Returns True and directory exists.
 
@@ -123,9 +119,8 @@ class TestCreateVenv:
             assert result is True
             assert venv_path.exists()
 
-    def test_create_venv_with_resolved_path(self, mocker):
-        """
-        Test that venv path is resolved (absolute) before creation.
+    def test_create_venv_with_resolved_path(self, mocker) -> None:
+        """Test that venv path is resolved (absolute) before creation.
 
         Expected behavior: subprocess.run receives absolute path.
 
@@ -148,9 +143,8 @@ class TestCreateVenv:
             call_str = " ".join(str(s) for s in call_args)
             assert str(venv_path.resolve()) in call_str
 
-    def test_create_venv_creates_directory_structure(self, mocker):
-        """
-        Test that create_venv creates proper directory structure.
+    def test_create_venv_creates_directory_structure(self, mocker) -> None:
+        """Test that create_venv creates proper directory structure.
 
         Expected behavior: Directory exists and is a valid directory.
 
@@ -174,9 +168,8 @@ class TestCreateVenv:
 class TestInstallDependencies:
     """Tests for install_dependencies function."""
 
-    def test_install_dependencies_production(self, mocker):
-        """
-        Test production dependency installation.
+    def test_install_dependencies_production(self, mocker) -> None:
+        """Test production dependency installation.
 
         Expected behavior: Installs base package without dev/medcat extras.
 
@@ -213,12 +206,13 @@ class TestInstallDependencies:
             assert mock_run.call_count == 2
             call0_str = str(mock_run.call_args_list[0])
             call1_str = str(mock_run.call_args_list[1])
-            assert "pip" in call0_str and "install" in call0_str
-            assert "-e" in call1_str and ".[dev,medcat]" not in call1_str
+            assert "pip" in call0_str
+            assert "install" in call0_str
+            assert "-e" in call1_str
+            assert ".[dev,medcat]" not in call1_str
 
-    def test_install_dependencies_dev(self, mocker):
-        """
-        Test development dependency installation.
+    def test_install_dependencies_dev(self, mocker) -> None:
+        """Test development dependency installation.
 
         Expected behavior: Installs package with dev and medcat extras.
 
@@ -254,9 +248,8 @@ class TestInstallDependencies:
             assert "-e" in calls_str
             assert ".[dev,medcat]" in calls_str
 
-    def test_install_dependencies_pip_upgrade(self, mocker):
-        """
-        Test that pip is upgraded before installing dependencies.
+    def test_install_dependencies_pip_upgrade(self, mocker) -> None:
+        """Test that pip is upgraded before installing dependencies.
 
         Expected behavior: First subprocess call upgrades pip/setuptools/wheel.
 
@@ -292,9 +285,8 @@ class TestInstallDependencies:
             assert "setuptools" in first_call_args
             assert "wheel" in first_call_args
 
-    def test_install_dependencies_platform_specific(self, mocker):
-        """
-        Test that platform-specific virtual environment paths are used.
+    def test_install_dependencies_platform_specific(self, mocker) -> None:
+        """Test that platform-specific virtual environment paths are used.
 
         Expected behavior: Correct Python binary path based on OS.
 
@@ -336,8 +328,7 @@ class TestInstallDependencies:
 
 
 class TestRegisterKernel:
-    """
-    Tests for the register_kernel function.
+    """Tests for the register_kernel function.
 
     The register_kernel function registers a Python virtual environment as
     a Jupyter kernel, making it available in Jupyter notebooks.
@@ -347,18 +338,19 @@ class TestRegisterKernel:
     - Runs ipykernel install command with user flag
     - Registers with display name based on venv name
 
-    Parameters:
+    Parameters
+    ----------
     - venv_path: Path to virtual environment directory
 
     This enables users to select their SNOMED-equipped environment
     from Jupyter's kernel list, ensuring consistent dependency versions.
 
     Return format: stdout from ipykernel install command (string)
+
     """
 
-    def test_register_kernel_success(self, mocker):
-        """
-        Test successful kernel registration.
+    def test_register_kernel_success(self, mocker) -> None:
+        """Test successful kernel registration.
 
         Expected behavior: Executes ipykernel install with correct arguments.
 
@@ -392,9 +384,8 @@ class TestRegisterKernel:
         assert "test_venv" in call_args
         assert "Python (test_venv)" in call_args
 
-    def test_register_kernel_installs_jupyter(self, mocker):
-        """
-        Test that ipykernel is installed before kernel registration.
+    def test_register_kernel_installs_jupyter(self, mocker) -> None:
+        """Test that ipykernel is installed before kernel registration.
 
         Expected behavior: First subprocess call installs ipykernel package.
 
@@ -413,7 +404,7 @@ class TestRegisterKernel:
 
         call_count = 0
 
-        def side_effect(*args, **kwargs):
+        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
             nonlocal call_count
             call_count += 1
             return mock_result
@@ -425,9 +416,8 @@ class TestRegisterKernel:
         assert result == ""
         assert call_count >= 2
 
-    def test_register_kernel_with_display_name(self, mocker):
-        """
-        Test kernel registration with correct display name format.
+    def test_register_kernel_with_display_name(self, mocker) -> None:
+        """Test kernel registration with correct display name format.
 
         Expected behavior: ipykernel install command includes proper name.
 
@@ -452,8 +442,7 @@ class TestRegisterKernel:
 
 
 class TestGetActivateScript:
-    """
-    Tests for the get_activate_script function.
+    """Tests for the get_activate_script function.
 
     The get_activate_script function returns the path to the virtual
     environment activation script.
@@ -465,15 +454,16 @@ class TestGetActivateScript:
     This is used in setup scripts and documentation to inform users
     how to activate their SNOMED Python environment.
 
-    Parameters:
+    Parameters
+    ----------
     - venv_path: Path to virtual environment directory
 
     Return: Full path to the activation script (Path object)
+
     """
 
-    def test_get_activate_script_linux(self, mocker):
-        """
-        Test get_activate_script returns correct path on Linux.
+    def test_get_activate_script_linux(self, mocker) -> None:
+        """Test get_activate_script returns correct path on Linux.
 
         Expected behavior: Returns venv_path/bin/activate
 
@@ -492,7 +482,7 @@ class TestGetActivateScript:
 
             assert result == (venv_path / "bin" / "activate")
 
-    def test_get_activate_script_windows(self, mocker):
+    def test_get_activate_script_windows(self, mocker) -> None:
         """Test activate script path on Windows."""
         with tempfile.TemporaryDirectory() as tmpdir:
             venv_path = Path(tmpdir) / "test_venv"
@@ -502,7 +492,7 @@ class TestGetActivateScript:
 
             assert result == (venv_path / "Scripts" / "activate.bat")
 
-    def test_get_activate_script_with_resolved_path(self, mocker):
+    def test_get_activate_script_with_resolved_path(self, mocker) -> None:
         """Test that venv path is resolved before determining activate script."""
         with tempfile.TemporaryDirectory() as tmpdir:
             venv_dir = Path(tmpdir) / "test_venv"
@@ -519,8 +509,7 @@ class TestGetActivateScript:
 
 
 class TestListKernels:
-    """
-    Tests for the list_kernels function.
+    """Tests for the list_kernels function.
 
     The list_kernels function retrieves a list of installed Jupyter kernels.
 
@@ -535,9 +524,8 @@ class TestListKernels:
     Return: String containing kernel listing (or error message)
     """
 
-    def test_list_kernels_success(self, mocker):
-        """
-        Test successful kernel listing.
+    def test_list_kernels_success(self, mocker) -> None:
+        r"""Test successful kernel listing.
 
         Expected behavior: Returns stdout from jupyter kernelspec list.
 
@@ -556,9 +544,8 @@ class TestListKernels:
 
         assert result == "kernel1\nkernel2"
 
-    def test_list_kernels_failure(self, mocker):
-        """
-        Test kernel listing failure handling.
+    def test_list_kernels_failure(self, mocker) -> None:
+        """Test kernel listing failure handling.
 
         Expected behavior: Returns error message string on subprocess failure.
 
@@ -578,8 +565,7 @@ class TestListKernels:
 
 
 class TestGetPythonExecutable:
-    """
-    Tests for the get_python_executable function.
+    """Tests for the get_python_executable function.
 
     The get_python_executable function returns the path to the current
     Python interpreter.
@@ -595,9 +581,8 @@ class TestGetPythonExecutable:
     Return: Full path to Python executable as string
     """
 
-    def test_get_python_executable(self):
-        """
-        Test that get_python_executable returns valid Python path.
+    def test_get_python_executable(self) -> None:
+        """Test that get_python_executable returns valid Python path.
 
         Expected behavior: Returns non-empty string with "python" in name.
 
@@ -616,8 +601,7 @@ class TestGetPythonExecutable:
 
 
 class TestMain:
-    """
-    Tests for the main function entry point.
+    """Tests for the main function entry point.
 
     The main function orchestrates SNOMED environment setup by calling
     all installation steps in sequence.
@@ -632,16 +616,17 @@ class TestMain:
     Entry point for SNOMED environment setup via `python setup/install.py`.
     Provides automated installation workflow.
 
-    Parameters:
+    Parameters
+    ----------
     - venv_name: Name for virtual env (default: "snomed_methods_env")
     - mode: Installation mode 'production' or 'dev'
 
     Ties together all previously tested functions into a single CLI interface.
+
     """
 
-    def test_main_default_params(self, mocker):
-        """
-        Test main function with default parameters.
+    def test_main_default_params(self, mocker) -> None:
+        """Test main function with default parameters.
 
         Expected behavior: Calls all setup steps in order.
 
@@ -669,9 +654,8 @@ class TestMain:
         mock_register_kernel.assert_called_once()
         mock_list_kernels.assert_called_once()
 
-    def test_main_custom_venv_name(self, mocker):
-        """
-        Test main function with custom venv name.
+    def test_main_custom_venv_name(self, mocker) -> None:
+        """Test main function with custom venv name.
 
         Expected behavior: Passes custom name to create_venv.
 
@@ -693,9 +677,8 @@ class TestMain:
 
         assert "custom_env" in str(mock_create.call_args)
 
-    def test_main_dev_mode(self, mocker):
-        """
-        Test main function with dev mode installation.
+    def test_main_dev_mode(self, mocker) -> None:
+        """Test main function with dev mode installation.
 
         Expected behavior: Installs dependencies with dev extras.
 
@@ -715,9 +698,8 @@ class TestMain:
 
         main()
 
-    def test_main_production_mode_explicit(self, mocker):
-        """
-        Test main function with explicit production mode.
+    def test_main_production_mode_explicit(self, mocker) -> None:
+        """Test main function with explicit production mode.
 
         Expected behavior: Installs base dependencies without extras.
 

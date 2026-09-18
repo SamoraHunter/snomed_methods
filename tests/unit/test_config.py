@@ -7,7 +7,7 @@ import pytest
 class TestSnomedConfig:
     """Tests for SnomedConfig class."""
 
-    def test_singleton_pattern(self):
+    def test_singleton_pattern(self) -> None:
         """Test that SnomedConfig is a singleton."""
         from snomed_methods.config import SnomedConfig
 
@@ -15,14 +15,14 @@ class TestSnomedConfig:
         config2 = SnomedConfig()
         assert config1 is config2
 
-    def test_get_instance(self):
+    def test_get_instance(self) -> None:
         """Test get_class method."""
         from snomed_methods.config import SnomedConfig
 
         config = SnomedConfig.get_instance()
         assert config is not None
 
-    def test_reset_singleton(self):
+    def test_reset_singleton(self) -> None:
         """Test reset method creates new instance."""
         from snomed_methods.config import SnomedConfig
 
@@ -35,7 +35,7 @@ class TestSnomedConfig:
 class TestGetConfig:
     """Tests for get_config function."""
 
-    def test_get_config_returns_instance(self):
+    def test_get_config_returns_instance(self) -> None:
         """Test that get_config returns SnomedConfig."""
         from snomed_methods.config import get_config
 

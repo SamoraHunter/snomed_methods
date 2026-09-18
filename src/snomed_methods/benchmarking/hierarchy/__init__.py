@@ -13,12 +13,12 @@ from .evaluation import (
 )
 
 __all__ = [
-    "generate_hierarchy_dataset",
-    "load_hierarchy_datasets",
     "evaluate_hierarchy_expansion",
     "exact_match_rate",
-    "recall_at_k",
-    "precision_at_k",
     "f1_at_k",
+    "generate_hierarchy_dataset",
     "jaccard_similarity",
+    "load_hierarchy_datasets",
+    "precision_at_k",
+    "recall_at_k",
 ]

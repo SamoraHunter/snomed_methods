@@ -19,19 +19,31 @@ Search Parameters:
     - use_medcat: Enable MedCAT similarity (default=False, requires model)
 """
 
-import importlib.util
-import os
-from typing import Dict, List, Optional, Set, Tuple, Union
+from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import dataclass
 import pandas as pd
 
-from snomed_methods.snomed_term_lookup import SnomedTermLookup
+if TYPE_CHECKING:
+
+    from snomed_methods.snomed_term_lookup import SnomedTermLookup
+else:
+    try:
+        from snomed_methods.snomed_methods_v1 import SnomedRelations as _SnomedRelations
+    except ImportError:
+        _SnomedRelations = None
+
+SIMILARITY_THRESHOLD = 0.3
 
 
 class SemanticSearch:
     """SNOMED CT semantic search with configurable expansion strategies."""
 
-    def __init__(self, uk_path: Optional[str] = None):
+    def __init__(self, uk_path: str | None = None) -> None:
         """Initialize searcher with UK Clinical RF2 data path.
 
         Args:
@@ -41,20 +53,18 @@ class SemanticSearch:
                 (relative to script)
         """
         if uk_path is None:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
+            script_dir = Path(__file__).resolve().parent
             project_root = (
-                os.path.dirname(script_dir)
-                if os.path.basename(script_dir) == "notebooks"
-                else script_dir
+                script_dir.parent if script_dir.name == "notebooks" else script_dir
             )
-            uk_path = os.path.join(
-                project_root,
-                "uk_sct2cl_42.2.0",
-                "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+            uk_path = str(
+                project_root
+                / "uk_sct2cl_42.2.0"
+                / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
             )
-        self.uk_path: Optional[str] = uk_path
+        self.uk_path: str | None = uk_path
 
-    def _generate_search_terms(self, term: str) -> List[str]:
+    def _generate_search_terms(self, term: str) -> list[str]:
         """Generate related search terms from input term.
 
         Creates variations including plurals and common prefixes to improve
@@ -77,8 +87,8 @@ class SemanticSearch:
             f"dys{term}",
         ]
 
-        seen: Set[str] = set()
-        result: List[str] = []
+        seen: set[str] = set()
+        result: list[str] = []
         for v in variants:
             if v and v.lower() not in seen:
                 seen.add(v.lower())
@@ -89,10 +99,11 @@ class SemanticSearch:
     def _term_lookup_search(
         self,
         lookup: SnomedTermLookup,
-        terms: List[str],
+        terms: list[str],
+        *,
         match_prefix: bool = True,
         top_n_per_term: int = 50,
-    ) -> Set[Tuple[str, str]]:
+    ) -> set[tuple[str, str]]:
         """Search concepts using term matching strategies.
 
         Performs both exact substring matching and prefix matching to find
@@ -107,35 +118,42 @@ class SemanticSearch:
         Returns:
             Set of (cui, term) tuples for matched concepts
         """
-        import warnings
+        import warnings  # noqa: PLC0415
 
         if importlib.util.find_spec("snomed_term_lookup") is None:
             warnings.warn("snomed-term-lookup not available", stacklevel=2)
             return set()
 
-        results: Set[Tuple[str, str]] = set()
+        if not terms:
+            return set()
 
-        for search_term in terms:
-            try:
-                matches = lookup.find_concepts_by_term(
+        try:
+            exact_matches: list[tuple[str, str]] = [
+                match
+                for search_term in terms
+                for match in lookup.find_concepts_by_term(
                     search_term,
                     top_n=top_n_per_term,
                 )
-                results.update(matches)
-            except Exception:
-                pass
+            ]
+            results.update(exact_matches)
+        except (KeyError, TypeError, ValueError):
+            pass
 
         if match_prefix:
-            for search_term in terms:
-                try:
-                    matches = lookup.find_concepts_by_term(
+            try:
+                prefix_matches: list[tuple[str, str]] = [
+                    match
+                    for search_term in terms
+                    for match in lookup.find_concepts_by_term(
                         search_term,
                         match_prefix=True,
                         top_n=top_n_per_term // 2,
                     )
-                    results.update(matches)
-                except Exception:
-                    pass
+                ]
+                results.update(prefix_matches)
+            except (KeyError, TypeError, ValueError):
+                pass
 
         return results
 
@@ -145,30 +163,30 @@ class SemanticSearch:
         Returns:
             DataFrame with active relationships, or None if file not found.
         """
-        rel_file = os.path.join(
-            self.uk_path,
-            "Full",
-            "Terminology",
-            "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+        rel_file = (
+            Path(self.uk_path)
+            / "Full"
+            / "Terminology"
+            / "sct2_Relationship_UKCLFull_GB1000000_20260603.txt"
         )
 
-        if not os.path.exists(rel_file):
+        if not rel_file.exists():
             return None
 
         try:
             rel_df = pd.read_csv(rel_file, sep="\t")
             return rel_df[rel_df["active"] == 1]
-        except Exception:
+        except (OSError, ValueError):
             return None
 
-    def _create_lookup_if_available(self) -> Optional[SnomedTermLookup]:
+    def _create_lookup_if_available(self) -> SnomedTermLookup | None:
         """Create SnomedTermLookup instance if available.
 
         Returns:
             SnomedTermLookup instance or None.
         """
         if importlib.util.find_spec("snomed_term_lookup") is not None:
-            from snomed_methods.snomed_term_lookup import (
+            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
                 create_term_lookup_from_directory,
             )
 
@@ -178,58 +196,50 @@ class SemanticSearch:
     def _process_concept(
         self,
         current_cui: str,
-        lookup: Optional[SnomedTermLookup],
-        results_codes: List[str],
-        results_names: List[str],
-        rel_active: pd.DataFrame | None,
-        processed: Set[str],
-        queue: List[str],
-    ) -> tuple[List[str], List[str], bool]:
-        """Process a single concept and update lists/queue.
+        context: ProcessConceptContext,
+    ) -> tuple[list[str], list[str], bool]:
+        """Process a single concept and update context.
 
         Args:
             current_cui: Current concept ID to process
-            lookup: SnomedTermLookup instance or None
-            results_codes: Output list of codes (modified in place)
-            results_names: Output list of names (modified in place)
-            rel_active: Active relationships dataframe or None
-            processed: Set of already processed concepts (modified in place)
-            queue: Queue of concepts to process (modified in place)
+            context: ProcessConceptContext with all state
 
         Returns:
             Tuple of (updated_codes, updated_names, should_continue).
         """
-        processed.add(current_cui)
-        results_codes.append(current_cui)
+        context.processed.add(current_cui)
+        context.results_codes.append(current_cui)
 
-        name = self._get_concept_name(current_cui, lookup)
-        results_names.append(name or f"CUI: {current_cui}")
+        name = self._get_concept_name(current_cui, context.lookup)
+        context.results_names.append(name or f"CUI: {current_cui}")
 
-        if rel_active is None:
-            return results_codes, results_names, True
+        if context.rel_active is None:
+            return context.results_codes, context.results_names, True
 
         try:
             cui_int = int(current_cui)
         except ValueError:
-            return results_codes, results_names, True
+            return context.results_codes, context.results_names, True
 
-        parent_rows = rel_active[rel_active["sourceId"] == cui_int]
+        parent_rows = context.rel_active[context.rel_active["sourceId"] == cui_int]
         for _, row in parent_rows.iterrows():
             p = str(row["destinationId"])
-            if p not in processed and p not in queue:
-                queue.append(p)
+            if p not in context.processed and p not in context.queue:
+                context.queue.append(p)
 
-        child_rows = rel_active[rel_active["destinationId"] == cui_int]
+        child_rows = context.rel_active[context.rel_active["destinationId"] == cui_int]
         for _, row in child_rows.iterrows():
             c = str(row["sourceId"])
-            if c not in processed and c not in queue:
-                queue.append(c)
+            if c not in context.processed and c not in context.queue:
+                context.queue.append(c)
 
-        return results_codes, results_names, True
+        return context.results_codes, context.results_names, True
 
     def _get_concept_name(
-        self, current_cui: str, lookup: Optional[SnomedTermLookup]
-    ) -> Optional[str]:
+        self,
+        current_cui: str,
+        lookup: SnomedTermLookup | None,
+    ) -> str | None:
         """Get the preferred name for a concept.
 
         Args:
@@ -246,15 +256,14 @@ class SemanticSearch:
             info = lookup.getconcept_info(current_cui)
             if info and "preferred_name" in info:
                 return info["preferred_name"]
-        except Exception:
+        except (KeyError, ValueError):
             pass
-        return None
 
     def _hierarchy_expansion(
         self,
-        cui_list: List[str],
+        cui_list: list[str],
         max_concepts: int = 100,
-    ) -> Tuple[List[str], List[str]]:
+    ) -> tuple[list[str], list[str]]:
         """Expand concepts via SNOMED CT hierarchy traversal.
 
         Traverses parent-child relationships using iterative breadth-first
@@ -273,10 +282,10 @@ class SemanticSearch:
 
         lookup = self._create_lookup_if_available()
 
-        results_codes: List[str] = []
-        results_names: List[str] = []
-        processed: Set[str] = set()
-        queue: List[str] = list(cui_list[:max_concepts])
+        results_codes: list[str] = []
+        results_names: list[str] = []
+        processed: set[str] = set()
+        queue: list[str] = list(cui_list[:max_concepts])
 
         while queue and len(processed) < max_concepts:
             current_cui = str(queue.pop(0))
@@ -284,24 +293,24 @@ class SemanticSearch:
             if current_cui in processed:
                 continue
 
-            results_codes, results_names, _ = self._process_concept(
-                current_cui,
-                lookup,
-                results_codes,
-                results_names,
-                rel_active,
-                processed,
-                queue,
+            context = ProcessConceptContext(
+                lookup=lookup,
+                rel_active=rel_active,
+                results_codes=results_codes,
+                results_names=results_names,
+                processed=processed,
+                queue=queue,
             )
+            _, _, _ = self._process_concept(current_cui, context)
 
         return results_codes, results_names
 
-    def _medcat_expansion(
+    def _medcat_expansion(  # noqa: C901
         self,
-        cui_list: List[str],
+        cui_list: list[str],
         context_type: str = "long",
         topn: int = 30,
-    ) -> Tuple[List[str], List[str]]:
+    ) -> tuple[list[str], list[str]]:
         """Expand concepts using MedCAT semantic similarity.
 
         Uses a trained MedCAT model to find semantically similar concepts
@@ -318,50 +327,60 @@ class SemanticSearch:
         if importlib.util.find_spec("medcat") is None:
             return [], []
 
-        snomed_path = os.path.join(
-            self.uk_path,
-            "Full",
-            "Terminology",
-            "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+        snomed_path = (
+            Path(self.uk_path)
+            / "Full"
+            / "Terminology"
+            / "sct2_Relationship_UKCLFull_GB1000000_20260603.txt"
         )
 
-        try:
-            from snomed_methods.snomed_methods_v1 import SnomedRelations
-
-            snomed = SnomedRelations(medcat=True, snomed_rf2_full_path=snomed_path)
-        except Exception:
+        if _SnomedRelations is None:
             return [], []
+
+        snomed = _SnomedRelations(medcat=True, snomed_rf2_full_path=str(snomed_path))
 
         if not snomed.has_medcat():
             return [], []
 
-        all_codes: List[str] = []
-        all_names: List[str] = []
+        all_codes: list[str] = []
+        all_names: list[str] = []
         cdb = snomed.cat.cdb
 
         for cui in cui_list:
             try:
                 sim_results = cdb.most_similar(
-                    str(cui), context_type=context_type, topn=topn
+                    str(cui),
+                    context_type=context_type,
+                    topn=topn,
                 )
-
-                for sim_cui, sim_data in sim_results.items():
-                    if sim_cui not in all_codes:
-                        sim_score = sim_data.get("sim", 0)
-                        if sim_score > 0.3:
-                            name = cdb.cui2preferred_name.get(
-                                sim_cui, f"CUI: {sim_cui}"
-                            )
-                            all_codes.append(str(sim_cui))
-                            all_names.append(name)
-            except Exception:
+            except (KeyError, TypeError, ValueError):
                 continue
+
+            for sim_cui, sim_data in sim_results.items():
+                if sim_cui not in all_codes:
+                    try:
+                        sim_score = sim_data.get("sim", 0)
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    if sim_score > SIMILARITY_THRESHOLD:
+                        try:
+                            name = cdb.cui2preferred_name.get(
+                                sim_cui,
+                                f"CUI: {sim_cui}",
+                            )
+                        except (KeyError, TypeError, ValueError):
+                            name = f"CUI: {sim_cui}"
+                        all_codes.append(str(sim_cui))
+                        all_names.append(name)
 
         return all_codes, all_names
 
     def _combine_results(
-        self, term_matches: Set[Tuple[str, str]], codes: List[str], names: List[str]
-    ) -> Dict[str, str]:
+        self,
+        term_matches: set[tuple[str, str]],
+        codes: list[str],
+        names: list[str],
+    ) -> dict[str, str]:
         """Combine results from multiple search methods.
 
         Args:
@@ -372,7 +391,7 @@ class SemanticSearch:
         Returns:
             Dictionary mapping CUI to preferred name
         """
-        combined: Dict[str, str] = {str(c): t for c, t in term_matches}
+        combined: dict[str, str] = {str(c): t for c, t in term_matches}
 
         for code, name in zip(codes, names):
             code_str = str(code)
@@ -384,14 +403,15 @@ class SemanticSearch:
 
         return combined
 
-    def search(
+    def search(  # noqa: PLR0915
         self,
-        term_or_terms: Union[str, List[str]],
+        term_or_terms: str | list[str],
         max_concepts: int = 100,
+        *,
         top_n_per_term: int = 50,
         use_hierarchy: bool = True,
         use_medcat: bool = False,
-    ) -> "SearchResults":
+    ) -> SearchResults:
         """Find all SNOMED CT concepts semantically related to the input.
 
         Args:
@@ -411,7 +431,7 @@ class SemanticSearch:
             search_terms = list(term_or_terms)
             base_term = "_".join(search_terms[:2])
 
-        log_messages: List[str] = []
+        log_messages: list[str] = []
         log_messages.append(f"{'=' * 60}")
         log_messages.append("SEMANTIC EXPANSION SEARCH")
         log_messages.append(f"{'=' * 60}")
@@ -424,24 +444,29 @@ class SemanticSearch:
 
         log_messages.append("\n[Step 1] Term Matching")
         log_messages.append(
-            "        Searching for descriptions containing search terms..."
+            "        Searching for descriptions containing search terms...",
         )
         if importlib.util.find_spec("snomed_term_lookup") is None:
-            raise ImportError(
+            msg = (
                 "snomed-term-lookup package required. "
                 "Install with: pip install snomed-term-lookup"
             )
+            raise ImportError(
+                msg,
+            )
 
-        from snomed_methods.snomed_term_lookup import (
+        from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
             create_term_lookup_from_directory,
         )
 
         lookup = create_term_lookup_from_directory(self.uk_path)
         term_matches = self._term_lookup_search(
-            lookup, search_terms, top_n_per_term=top_n_per_term
+            lookup,
+            search_terms,
+            top_n_per_term=top_n_per_term,
         )
         log_messages.append(
-            f"        Found {len(term_matches)} concepts via term matching"
+            f"        Found {len(term_matches)} concepts via term matching",
         )
 
         cui_list = [str(c) for c, _ in term_matches]
@@ -451,10 +476,11 @@ class SemanticSearch:
             log_messages.append("\n[Step 2] Hierarchy Expansion")
             log_messages.append("        Traversing parent-child relationships...")
             hierarchy_codes, hierarchy_names = self._hierarchy_expansion(
-                cui_list, max_concepts=max_concepts
+                cui_list,
+                max_concepts=max_concepts,
             )
             log_messages.append(
-                f"        Found {len(hierarchy_codes)} concepts via hierarchy"
+                f"        Found {len(hierarchy_codes)} concepts via hierarchy",
             )
 
         medcat_codes, medcat_names = [], []
@@ -462,17 +488,21 @@ class SemanticSearch:
             log_messages.append("\n[Step 3] MedCAT Semantic Expansion")
             log_messages.append("        Finding semantically similar concepts...")
             medcat_codes, medcat_names = self._medcat_expansion(
-                cui_list, context_type="long", topn=30
+                cui_list,
+                context_type="long",
+                topn=30,
             )
             if not medcat_codes:
                 log_messages.append("        MedCAT not available - skipping")
             else:
                 log_messages.append(
-                    f"        Found {len(medcat_codes)} concepts via MedCAT"
+                    f"        Found {len(medcat_codes)} concepts via MedCAT",
                 )
 
         combined = self._combine_results(
-            term_matches, hierarchy_codes + medcat_codes, hierarchy_names + medcat_names
+            term_matches,
+            hierarchy_codes + medcat_codes,
+            hierarchy_names + medcat_names,
         )
 
         core_count = sum(1 for name in combined.values() if base_term in name.lower())
@@ -502,32 +532,33 @@ class SemanticSearch:
 class SearchResults:
     """Container for semantic search results with easy access to different formats."""
 
-    def __init__(self, concepts: Dict[str, str], metrics: Dict[str, int]) -> None:
-        self._concepts: Dict[str, str] = concepts
-        self._metrics: Dict[str, int] = metrics
+    def __init__(self, concepts: dict[str, str], metrics: dict[str, int]) -> None:
+        self._concepts: dict[str, str] = concepts
+        self._metrics: dict[str, int] = metrics
 
     @property
-    def concepts(self) -> Dict[str, str]:
+    def concepts(self) -> dict[str, str]:
         return dict(self._concepts)
 
     @property
-    def cuis(self) -> List[str]:
+    def cuis(self) -> list[str]:
         return sorted(self._concepts.keys())
 
     @property
-    def terms(self) -> List[str]:
+    def terms(self) -> list[str]:
         return [self._concepts[cui] for cui in self.cuis]
 
     @property
-    def metrics(self) -> Dict:
+    def metrics(self) -> dict:
         return dict(self._metrics)
 
-    def get_cui_to_term_dict(self) -> Dict[str, str]:
+    def get_cui_to_term_dict(self) -> dict[str, str]:
         return self.concepts
 
     def get_core_concepts(
-        self, base_term: Optional[str] = None
-    ) -> List[Tuple[str, str]]:
+        self,
+        base_term: str | None = None,
+    ) -> list[tuple[str, str]]:
         if base_term is None and "search_terms_used" in self._metrics:
             base_term = self._metrics["search_terms_used"][0]
 
@@ -540,8 +571,9 @@ class SearchResults:
         return list(self._concepts.items())
 
     def get_expanded_concepts(
-        self, base_term: Optional[str] = None
-    ) -> List[Tuple[str, str]]:
+        self,
+        base_term: str | None = None,
+    ) -> list[tuple[str, str]]:
         core = {c for c, _ in self.get_core_concepts(base_term)}
         return [(cui, name) for cui, name in self._concepts.items() if cui not in core]
 
@@ -557,13 +589,32 @@ class SearchResults:
         )
 
 
+@dataclass
+class ExpandConfig:
+    """Configuration for concept expansion."""
+
+    uk_path: str | None = None
+    max_concepts: int = 100
+    top_n_per_term: int = 50
+    use_hierarchy: bool = True
+    use_medcat: bool = False
+
+
+@dataclass
+class ProcessConceptContext:
+    """Context for processing a concept during hierarchy expansion."""
+
+    lookup: SnomedTermLookup | None
+    rel_active: pd.DataFrame | None
+    results_codes: list[str]
+    results_names: list[str]
+    processed: set[str]
+    queue: list[str]
+
+
 def expand_concepts(
-    term_or_terms: Union[str, List[str]],
-    uk_path: Optional[str] = None,
-    max_concepts: int = 100,
-    top_n_per_term: int = 50,
-    use_hierarchy: bool = True,
-    use_medcat: bool = False,
+    term_or_terms: str | list[str],
+    config: ExpandConfig | None = None,
 ) -> SearchResults:
     """Convenience function to perform semantic expansion.
 
@@ -571,24 +622,23 @@ def expand_concepts(
 
     Args:
         term_or_terms: Single term or list of terms
-        uk_path: Path to SNOMED data (default uses standard location)
-        max_concepts: Max hierarchy expansion (default 100)
-        top_n_per_term: Max term matches per search (default 50)
-        use_hierarchy: Enable hierarchy traversal (default True)
-        use_medcat: Enable MedCAT (default False)
+        config: Configuration object for expansion params
 
     Returns:
         SearchResults object
     """
-    searcher = SemanticSearch(uk_path=uk_path)
+    if config is None:
+        config = ExpandConfig()
+    searcher = SemanticSearch(uk_path=config.uk_path)
     return searcher.search(
         term_or_terms,
-        max_concepts=max_concepts,
-        top_n_per_term=top_n_per_term,
-        use_hierarchy=use_hierarchy,
-        use_medcat=use_medcat,
+        max_concepts=config.max_concepts,
+        top_n_per_term=config.top_n_per_term,
+        use_hierarchy=config.use_hierarchy,
+        use_medcat=config.use_medcat,
     )
 
 
 if __name__ == "__main__":
-    results = expand_concepts("meningioma", max_concepts=50)
+    config = ExpandConfig(max_concepts=50)
+    results = expand_concepts("meningioma", config=config)

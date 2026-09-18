@@ -1,19 +1,25 @@
-#!/usr/bin/env python3
 # Copyright (c) 2026 SNOMED Methods Contributors
 # SPDX-License-Identifier: MIT
-"""
-Concept Mapping Module for SNOMED CT
+"""Concept Mapping Module for SNOMED CT.
 
 Provides tools for mapping SNOMED CT concepts to other terminologies:
 - ICD-10 (International Classification of Diseases)
 - LOINC (Logical Observation Identifiers Names and Codes)
 - RxNorm (Normalized Naming System for Drugs)
 - Bidirectional CUI mapping
-- Mapping confidence scoring
+- Mapping confidence scoring.
 """
 
-import os
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+
+try:
+    from medcat.cat import CAT
+except ImportError:
+    CAT = None
 
 
 class ConceptMapper:
@@ -29,16 +35,17 @@ class ConceptMapper:
 
     def __init__(
         self,
-        uk_path: Optional[str] = None,
-        icd_map_file: Optional[str] = None,
-        loinc_map_file: Optional[str] = None,
-    ):
+        uk_path: str | None = None,
+        icd_map_file: str | None = None,
+        loinc_map_file: str | None = None,
+    ) -> None:
         """Initialize mapper with SNOMED data paths.
 
         Args:
             uk_path: Path to UK Clinical RF2 directory
             icd_map_file: Path to ICD mapping file (auto-detected if None)
             loinc_map_file: Path to LOINC mapping file (auto-detected if None)
+
         """
         self.uk_path = uk_path
         self.icd_map_file = icd_map_file
@@ -51,7 +58,7 @@ class ConceptMapper:
 
     def _auto_detect_paths(self) -> None:
         """Automatically detect mapping files from UK Clinical RF2 directory."""
-        if not self.uk_path or not os.path.exists(self.uk_path):
+        if not self.uk_path or not Path(self.uk_path).exists():
             return
 
         snapshot_root = None
@@ -59,46 +66,45 @@ class ConceptMapper:
             "SnomedCT_UKClinicalRF2_PRODUCTION_*",
             "SnomedCT_UKClinicalRefsetsRF2_PRODUCTION_*",
         ]:
-            import glob
-
-            found = glob.glob(os.path.join(self.uk_path, subdirs))
+            found = list(Path(self.uk_path).glob(subdirs))
             if found:
-                snapshot_root = found[0]
+                snapshot_root = str(found[0])
                 break
 
         if not snapshot_root:
             return
 
-        map_dir = os.path.join(snapshot_root, "Snapshot", "Refset", "Map")
+        map_dir = Path(snapshot_root) / "Snapshot" / "Refset" / "Map"
 
-        if not self.icd_map_file and os.path.exists(map_dir):
+        if not self.icd_map_file and map_dir.exists():
             possible_icd_files = [
                 f
-                for f in os.listdir(map_dir)
-                if "ICD10" in f or ("ExtendedMap" in f and "UK" in f)
+                for f in map_dir.iterdir()
+                if "ICD10" in f.name or ("ExtendedMap" in f.name and "UK" in f.name)
             ]
             if possible_icd_files:
-                self.icd_map_file = os.path.join(
-                    map_dir, sorted(possible_icd_files)[-1]
+                self.icd_map_file = str(
+                    max(possible_icd_files, key=lambda p: p.stat().st_mtime),
                 )
 
-        if not self.loinc_map_file and os.path.exists(map_dir):
+        if not self.loinc_map_file and map_dir.exists():
             possible_loinc_files = [
                 f
-                for f in os.listdir(map_dir)
-                if "LOINC" in f or ("SimpleMap" in f and "UK" in f)
+                for f in map_dir.iterdir()
+                if "LOINC" in f.name or ("SimpleMap" in f.name and "UK" in f.name)
             ]
             if possible_loinc_files:
-                self.loinc_map_file = os.path.join(
-                    map_dir, sorted(possible_loinc_files)[-1]
+                self.loinc_map_file = str(
+                    max(possible_loinc_files, key=lambda p: p.stat().st_mtime),
                 )
 
-    def load_icd_mapping(self) -> Dict[str, List[dict]]:
+    def load_icd_mapping(self) -> dict[str, list[dict]]:
         """Load ICD-10 mappings from SNOMED CT refset files.
 
         Returns:
             Dict mapping SNOMED CUIs to list of {icd_code, description,
             confidence, source} dicts
+
         """
         if self._icd_mapping:
             return self._icd_mapping
@@ -106,49 +112,47 @@ class ConceptMapper:
         if not self.icd_map_file:
             self._auto_detect_paths()
 
-        if not self.icd_map_file or not os.path.exists(self.icd_map_file):
+        if not self.icd_map_file or not Path(self.icd_map_file).exists():
             return {}
 
         try:
-            import pandas as pd
-
             df = pd.read_csv(self.icd_map_file, sep="\t", low_memory=False)
-
-            for _, row in df.iterrows():
-                if not row.get("active"):
-                    continue
-
-                snomed_cui = str(row.get("referencedComponentId"))
-                map_target = str(row.get("mapTarget", "")).strip()
-
-                if not snomed_cui or not map_target:
-                    continue
-
-                mapping = {
-                    "icd_code": map_target,
-                    "description": self._get_icd_description(map_target),
-                    "confidence": self._calculate_confidence(row),
-                    "source": os.path.basename(self.icd_map_file),
-                    "map_group": int(row.get("mapGroup", 1)),
-                    "map_priority": int(row.get("mapPriority", 1)),
-                    "correlation_id": str(row.get("correlationId", "")),
-                }
-
-                if snomed_cui not in self._icd_mapping:
-                    self._icd_mapping[snomed_cui] = []
-                self._icd_mapping[snomed_cui].append(mapping)
-
-            return self._icd_mapping
-
-        except Exception:
+        except (FileNotFoundError, PermissionError, OSError):
             return {}
 
-    def load_loinc_mapping(self) -> Dict[str, List[dict]]:
+        for _, row in df.iterrows():
+            if not row.get("active"):
+                continue
+
+            snomed_cui = str(row.get("referencedComponentId"))
+            map_target = str(row.get("mapTarget", "")).strip()
+
+            if not snomed_cui or not map_target:
+                continue
+
+            mapping = {
+                "icd_code": map_target,
+                "description": self._get_icd_description(map_target),
+                "confidence": self._calculate_confidence(row),
+                "source": Path(self.icd_map_file).name,
+                "map_group": int(row.get("mapGroup", 1)),
+                "map_priority": int(row.get("mapPriority", 1)),
+                "correlation_id": str(row.get("correlationId", "")),
+            }
+
+            if snomed_cui not in self._icd_mapping:
+                self._icd_mapping[snomed_cui] = []
+            self._icd_mapping[snomed_cui].append(mapping)
+
+        return self._icd_mapping
+
+    def load_loinc_mapping(self) -> dict[str, list[dict]]:
         """Load LOINC mappings from SNOMED CT refset files.
 
         Returns:
             Dict mapping SNOMED CUIs to list of {loinc_code, description,
             confidence, source} dicts
+
         """
         if self._loinc_mapping:
             return self._loinc_mapping
@@ -156,39 +160,36 @@ class ConceptMapper:
         if not self.loinc_map_file:
             self._auto_detect_paths()
 
-        if not self.loinc_map_file or not os.path.exists(self.loinc_map_file):
+        if not self.loinc_map_file or not Path(self.loinc_map_file).exists():
             return {}
 
         try:
-            import pandas as pd
-
             df = pd.read_csv(self.loinc_map_file, sep="\t", low_memory=False)
-
-            for _, row in df.iterrows():
-                if not row.get("active"):
-                    continue
-
-                snomed_cui = str(row.get("referencedComponentId"))
-                map_target = str(row.get("mapTarget", "")).strip()
-
-                if not snomed_cui or not map_target:
-                    continue
-
-                mapping = {
-                    "loinc_code": map_target,
-                    "description": self._get_loinc_description(map_target),
-                    "confidence": self._calculate_confidence(row),
-                    "source": os.path.basename(self.loinc_map_file),
-                }
-
-                if snomed_cui not in self._loinc_mapping:
-                    self._loinc_mapping[snomed_cui] = []
-                self._loinc_mapping[snomed_cui].append(mapping)
-
-            return self._loinc_mapping
-
-        except Exception:
+        except (FileNotFoundError, PermissionError, OSError):
             return {}
+
+        for _, row in df.iterrows():
+            if not row.get("active"):
+                continue
+
+            snomed_cui = str(row.get("referencedComponentId"))
+            map_target = str(row.get("mapTarget", "")).strip()
+
+            if not snomed_cui or not map_target:
+                continue
+
+            mapping = {
+                "loinc_code": map_target,
+                "description": self._get_loinc_description(map_target),
+                "confidence": self._calculate_confidence(row),
+                "source": Path(self.loinc_map_file).name,
+            }
+
+            if snomed_cui not in self._loinc_mapping:
+                self._loinc_mapping[snomed_cui] = []
+            self._loinc_mapping[snomed_cui].append(mapping)
+
+        return self._loinc_mapping
 
     def _get_icd_description(self, icd_code: str) -> str:
         """Get human-readable ICD-10 description for a code.
@@ -198,6 +199,7 @@ class ConceptMapper:
 
         Returns:
             Description string or empty string if not found
+
         """
         icd_descriptions = {
             "C83.3": "Mantle cell lymphoma",
@@ -221,6 +223,7 @@ class ConceptMapper:
 
         Returns:
             Description string or empty string if not found
+
         """
         loinc_descriptions = {
             "718-7": "Hemoglobin [Mass/volume] in Blood",
@@ -234,19 +237,27 @@ class ConceptMapper:
             "8867-4": "Heart rate",
             "9279-1": "Respiratory rate",
         }
-        return loinc_descriptions.get(loinc_code, "")
+        return loinc_descriptions.get(
+            loinc_code,
+            "",
+        )  # Note: typo preserved from original
 
-    def _calculate_confidence(self, row: Any) -> float:
+    def _calculate_confidence(self, row: object) -> float:
         """Calculate mapping confidence score based on map rule characteristics.
 
         Args:
-            row: Pandas Series with mapping data
+            row: Object with mapping data attributes
 
         Returns:
             Confidence score between 0.0 and 1.0
+
         """
-        correlation_id = str(row.get("correlationId", ""))
-        map_category_id = str(row.get("mapCategoryId", ""))
+        correlation_id = str(
+            getattr(row, "get", lambda _, default="": default)("correlationId", ""),
+        )
+        map_category_id = str(
+            getattr(row, "get", lambda _, default="": default)("mapCategoryId", ""),
+        )
 
         correlation_confidence = {
             "723899007": 0.95,
@@ -271,7 +282,7 @@ class ConceptMapper:
 
         return min(score, 1.0)
 
-    def map_to_icd(self, snomed_cui: str) -> List[dict]:
+    def map_to_icd(self, snomed_cui: str) -> list[dict]:
         """Map a SNOMED CT concept to ICD-10 codes.
 
         Args:
@@ -279,13 +290,14 @@ class ConceptMapper:
 
         Returns:
             List of mapping dictionaries with icd_code, description, confidence, source
+
         """
         if not self._icd_mapping:
             self.load_icd_mapping()
 
         return self._icd_mapping.get(str(snomed_cui), [])
 
-    def map_to_loinc(self, snomed_cui: str) -> List[dict]:
+    def map_to_loinc(self, snomed_cui: str) -> list[dict]:
         """Map a SNOMED CT concept to LOINC codes.
 
         Args:
@@ -294,13 +306,14 @@ class ConceptMapper:
         Returns:
             List of mapping dicts with loinc_code, description,
             confidence, source
+
         """
         if not self._loinc_mapping:
             self.load_loinc_mapping()
 
         return self._loinc_mapping.get(str(snomed_cui), [])
 
-    def map_to_rxnorm(self, snomed_cui: str) -> List[dict]:
+    def map_to_rxnorm(self, snomed_cui: str) -> list[dict]:
         """Map a SNOMED CT concept to RxNorm codes.
 
         Uses MedCAT model pack for mapping if available.
@@ -312,39 +325,34 @@ class ConceptMapper:
         Returns:
             List of mapping dicts with rxnorm_code, description,
             confidence, source
+
         """
         mappings = []
 
         try:
-            from medcat.cat import CAT
-
-            model_packs = [
-                os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)),
-                    "model_packs",
-                    "medcat_model_pack_422d1d38fc58f158.zip",
+            cat = CAT.load_model_pack(
+                str(
+                    Path(__file__).parent.parent
+                    / "model_packs"
+                    / "medcat_model_pack_422d1d38fc58f158.zip",
                 ),
-            ]
-
-            for model_path in model_packs:
-                if os.path.exists(model_path):
-                    cat = CAT.load_model_pack(model_path)
-                    if str(snomed_cui) in cat.cdb.cui2preferred_name:
-                        cui_info = cat.cdb.cui2tuis.get(str(snomed_cui), [])
-                        if "T121" in cui_info or "T116" in cui_info:
-                            rxnorm_code = f"RXNORM_{snomed_cui}"
-                            mappings.append(
-                                {
-                                    "rxnorm_code": rxnorm_code,
-                                    "description": cat.cdb.cui2preferred_name.get(
-                                        str(snomed_cui), ""
-                                    ),
-                                    "confidence": 0.75,
-                                    "source": "MedCAT model pack",
-                                }
-                            )
-                    break
-        except Exception:
+            )
+            if str(snomed_cui) in cat.cdb.cui2preferred_name:
+                cui_info = cat.cdb.cui2tuis.get(str(snomed_cui), [])
+                if "T121" in cui_info or "T116" in cui_info:
+                    rxnorm_code = f"RXNORM_{snomed_cui}"
+                    mappings.append(
+                        {
+                            "rxnorm_code": rxnorm_code,
+                            "description": cat.cdb.cui2preferred_name.get(
+                                str(snomed_cui),
+                                "",
+                            ),
+                            "confidence": 0.75,
+                            "source": "MedCAT model pack",
+                        },
+                    )
+        except (KeyError, TypeError, AttributeError):
             pass
 
         if not mappings:
@@ -359,14 +367,14 @@ class ConceptMapper:
                             "description": f"Term-based match for '{term}'",
                             "confidence": 0.5,
                             "source": "Heuristic term matching (no MedCAT)",
-                        }
+                        },
                     )
-            except Exception:
+            except (KeyError, TypeError, AttributeError):
                 pass
 
         return mappings
 
-    def map_bidirectional(self, source_cui: str, source_vocab: str) -> List[dict]:
+    def map_bidirectional(self, source_cui: str, source_vocab: str) -> list[dict]:
         """Map between different vocabulary systems using bidirectional CUI mapping.
 
         Args:
@@ -376,6 +384,7 @@ class ConceptMapper:
         Returns:
             List of mapping dicts with target_code, target_vocab,
             confidence, explanation
+
         """
         mappings = []
         source_cui_str = str(source_cui)
@@ -384,37 +393,37 @@ class ConceptMapper:
             snomed_cui = source_cui_str
 
             icd_mappings = self.map_to_icd(snomed_cui)
-            for m in icd_mappings:
-                mappings.append(
-                    {
-                        "target_code": m["icd_code"],
-                        "target_vocab": "ICD-10",
-                        "confidence": m["confidence"],
-                        "explanation": f"SNOMED→ICD mapping via {m['source']}",
-                    }
-                )
+            mappings.extend(
+                {
+                    "target_code": m["icd_code"],
+                    "target_vocab": "ICD-10",
+                    "confidence": m["confidence"],
+                    "explanation": f"SNOMED→ICD mapping via {m['source']}",
+                }
+                for m in icd_mappings
+            )
 
             loinc_mappings = self.map_to_loinc(snomed_cui)
-            for m in loinc_mappings:
-                mappings.append(
-                    {
-                        "target_code": m["loinc_code"],
-                        "target_vocab": "LOINC",
-                        "confidence": m["confidence"],
-                        "explanation": f"SNOMED→LOINC mapping via {m['source']}",
-                    }
-                )
+            mappings.extend(
+                {
+                    "target_code": m["loinc_code"],
+                    "target_vocab": "LOINC",
+                    "confidence": m["confidence"],
+                    "explanation": f"SNOMED→LOINC mapping via {m['source']}",
+                }
+                for m in loinc_mappings
+            )
 
             rxnorm_mappings = self.map_to_rxnorm(snomed_cui)
-            for m in rxnorm_mappings:
-                mappings.append(
-                    {
-                        "target_code": m["rxnorm_code"],
-                        "target_vocab": "RxNorm",
-                        "confidence": m["confidence"],
-                        "explanation": f"SNOMED→RxNorm mapping via {m['source']}",
-                    }
-                )
+            mappings.extend(
+                {
+                    "target_code": m["rxnorm_code"],
+                    "target_vocab": "RxNorm",
+                    "confidence": m["confidence"],
+                    "explanation": f"SNOMED→RxNorm mapping via {m['source']}",
+                }
+                for m in rxnorm_mappings
+            )
 
         elif source_vocab.upper() == "UMLS_CUI":
             umls_cui = source_cui_str
@@ -424,7 +433,7 @@ class ConceptMapper:
                     "target_vocab": "SNOMED (estimated)",
                     "confidence": 0.6,
                     "explanation": "UMLS CUI to SNOMED",
-                }
+                },
             )
 
         elif source_vocab.upper() == "ICD10":
@@ -434,7 +443,7 @@ class ConceptMapper:
                     "target_vocab": "SNOMED (estimated)",
                     "confidence": 0.5,
                     "explanation": "ICD-10 to SNOMED reverse mapping estimated",
-                }
+                },
             )
 
         elif source_vocab.upper() == "LOINC":
@@ -444,7 +453,7 @@ class ConceptMapper:
                     "target_vocab": "SNOMED (estimated)",
                     "confidence": 0.5,
                     "explanation": "LOINC to SNOMED reverse mapping estimated",
-                }
+                },
             )
 
         return mappings
@@ -452,33 +461,36 @@ class ConceptMapper:
     def _get_refset_name(self) -> str:
         """Get the name of the refset being used for mappings."""
         if self.icd_map_file:
-            return os.path.basename(self.icd_map_file)
+            return Path(self.icd_map_file).name
         if self.loinc_map_file:
-            return os.path.basename(self.loinc_map_file)
+            return Path(self.loinc_map_file).name
         return "default SNOMED CT reference set"
 
-    def _get_term_lookup(self) -> Any:
+    def _get_term_lookup(self) -> object:
         """Get or create a SnomedTermLookup instance."""
-        from snomed_methods import (
+        from snomed_methods import (  # noqa: PLC0415
             SnomedTermLookup,
             create_term_lookup_from_directory,
         )
 
         if self.uk_path:
             return create_term_lookup_from_directory(self.uk_path)
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(script_dir)
-        default_path = os.path.join(
-            project_root,
-            "uk_sct2cl_42.2.0",
-            "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+        script_dir = Path(__file__).parent.resolve()
+        project_root = script_dir.parent
+        default_path = (
+            project_root
+            / "uk_sct2cl_42.2.0"
+            / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z"
         )
-        if os.path.exists(default_path):
-            return create_term_lookup_from_directory(default_path)
+        if default_path.exists():
+            return create_term_lookup_from_directory(str(default_path))
         return SnomedTermLookup()
 
     def multi_hop_mapping(
-        self, start_cui: str, target_vocabs: List[str], max_hops: int = 2
+        self,
+        start_cui: str,
+        target_vocabs: list[str],
+        max_hops: int = 2,
     ) -> dict:
         """Perform multi-hop mappings across terminologies.
 
@@ -491,6 +503,7 @@ class ConceptMapper:
 
         Returns:
             Dictionary with path information and confidence scores
+
         """
         result = {
             "start_cui": str(start_cui),
@@ -508,7 +521,7 @@ class ConceptMapper:
                         "hop_2": {"code": m["icd_code"], "vocab": "ICD-10"},
                         "confidence": m["confidence"],
                         "explanation": "Direct SNOMED→ICD mapping",
-                    }
+                    },
                 )
 
         if "LOINC" in target_vocabs:
@@ -520,7 +533,7 @@ class ConceptMapper:
                         "hop_2": {"code": m["loinc_code"], "vocab": "LOINC"},
                         "confidence": m["confidence"],
                         "explanation": "Direct SNOMED→LOINC mapping",
-                    }
+                    },
                 )
 
         if "RxNorm" in target_vocabs:
@@ -532,7 +545,7 @@ class ConceptMapper:
                         "hop_2": {"code": m["rxnorm_code"], "vocab": "RxNorm"},
                         "confidence": m["confidence"],
                         "explanation": "Direct SNOMED→RxNorm mapping",
-                    }
+                    },
                 )
 
         return result
@@ -545,6 +558,7 @@ class ConceptMapper:
 
         Returns:
             Dictionary with ICD-10, LOINC, and RxNorm mappings
+
         """
         return {
             "snomed_cui": str(snomed_cui),
@@ -553,7 +567,7 @@ class ConceptMapper:
             "rxnorm": self.map_to_rxnorm(str(snomed_cui)),
         }
 
-    def export_mappings(self, snomed_cuis: List[str], output_path: str) -> int:
+    def export_mappings(self, snomed_cuis: list[str], output_path: str) -> int:
         """Export mappings for multiple concepts to CSV.
 
         Args:
@@ -562,13 +576,12 @@ class ConceptMapper:
 
         Returns:
             Number of mappings exported
+
         """
         if not self._icd_mapping:
             self.load_icd_mapping()
         if not self._loinc_mapping:
             self.load_loinc_mapping()
-
-        import pandas as pd
 
         records = []
         count = 0
@@ -583,7 +596,7 @@ class ConceptMapper:
                         "description": m.get("description", ""),
                         "confidence": m["confidence"],
                         "source": m["source"],
-                    }
+                    },
                 )
                 count += 1
 
@@ -596,7 +609,7 @@ class ConceptMapper:
                         "description": m.get("description", ""),
                         "confidence": m["confidence"],
                         "source": m["source"],
-                    }
+                    },
                 )
                 count += 1
 
@@ -608,8 +621,8 @@ class ConceptMapper:
 
     def batch_map_concepts(
         self,
-        snomed_cuis: List[str],
-        target_vocabs: Optional[List[str]] = None,
+        snomed_cuis: list[str],
+        target_vocabs: list[str] | None = None,
     ) -> dict:
         """Batch map multiple SNOMED concepts.
 
@@ -619,6 +632,7 @@ class ConceptMapper:
 
         Returns:
             Dictionary mapping each CUI to its mappings
+
         """
         if target_vocabs is None:
             target_vocabs = ["ICD-10", "LOINC", "RxNorm"]
@@ -641,8 +655,8 @@ class ConceptMapper:
 def map_concept(
     snomed_cui: str,
     target_vocab: str = "ICD-10",
-    uk_path: Optional[str] = None,
-) -> List[dict]:
+    uk_path: str | None = None,
+) -> list[dict]:
     """Convenience function for mapping a single SNOMED concept.
 
     Args:
@@ -652,6 +666,7 @@ def map_concept(
 
     Returns:
         List of mapping dictionaries
+
     """
     mapper = ConceptMapper(uk_path=uk_path)
     if target_vocab.upper() == "ICD-10":
@@ -664,9 +679,9 @@ def map_concept(
 
 
 def batch_map_concepts(
-    snomed_cuis: List[str],
-    target_vocabs: Optional[List[str]] = None,
-    uk_path: Optional[str] = None,
+    snomed_cuis: list[str],
+    target_vocabs: list[str] | None = None,
+    uk_path: str | None = None,
 ) -> dict:
     """Batch map multiple SNOMED concepts.
 
@@ -677,6 +692,7 @@ def batch_map_concepts(
 
     Returns:
         Dictionary mapping each CUI to its mappings
+
     """
     if target_vocabs is None:
         target_vocabs = ["ICD-10", "LOINC", "RxNorm"]

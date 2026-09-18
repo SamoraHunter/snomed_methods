@@ -2,7 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Dataset generation and loading for hierarchy expansion benchmarking."""
 
-from typing import List, Optional
+from __future__ import annotations
+
+import pathlib
+from pathlib import Path
 
 try:
     from datasets import DatasetDict
@@ -12,10 +15,24 @@ except ImportError:
         pass
 
 
+SMALL_SIZE = 25
+MEDIUM_SIZE = 100
+LARGE_SIZE = 500
+MAX_CHILDREN = 5
+MAX_PARENTS = 3
+CHILD_MODULO = 7
+CHILD_THRESHOLD = 3
+PARENT_MODULO = 5
+PARENT_THRESHOLD = 2
+
+CACHE_DIR = Path(__file__).parent.parent / "cache"
+HIERARCHY_CACHE_DIR = CACHE_DIR / "hierarchy_datasets"
+
+
 def generate_hierarchy_dataset(
     num_samples: int = 100,
-    seed_cuis: Optional[List[str]] = None,
-) -> List[dict]:
+    seed_cuis: list[str] | None = None,
+) -> list[dict]:
     """Generate synthetic hierarchy expansion dataset for benchmarking.
 
     Each sample contains a seed CUI and expected related concepts based on
@@ -27,6 +44,7 @@ def generate_hierarchy_dataset(
 
     Returns:
         List of dicts with keys: 'seed_cui', 'expected_related'
+
     """
     if seed_cuis is None:
         seed_cuis = [
@@ -50,9 +68,9 @@ def generate_hierarchy_dataset(
             if cui == other:
                 continue
             diff = abs(hash(cui + "!")) - abs(hash(other + "@"))
-            if diff % 7 < 3:
+            if diff % CHILD_MODULO < CHILD_THRESHOLD:
                 children.append(str(abs(hash(cui + f"child{idx}")))[:9])
-            elif diff % 5 < 2:
+            elif diff % PARENT_MODULO < PARENT_THRESHOLD:
                 parents.append(str(abs(hash(cui + f"parent{idx}")))[:9])
 
         hierarchy_relations[cui] = {
@@ -76,13 +94,13 @@ def generate_hierarchy_dataset(
                 "seed_cui": seed_cui,
                 "expected_related": expected_related,
                 "num_expected": len(expected_related),
-            }
+            },
         )
 
     return results
 
 
-def load_hierarchy_datasets(cache_dir: Optional[str] = None) -> dict:
+def load_hierarchy_datasets(cache_dir: str | None = None) -> dict:
     """Load pre-generated hierarchy datasets or generate new ones.
 
     Args:
@@ -90,18 +108,15 @@ def load_hierarchy_datasets(cache_dir: Optional[str] = None) -> dict:
 
     Returns:
         Dict with dataset names as keys and lists of samples
+
     """
-    import os
-
     if cache_dir is None:
-        cache_dir = os.path.join(
-            os.path.dirname(__file__), "..", "cache", "hierarchy_datasets"
-        )
+        cache_dir = HIERARCHY_CACHE_DIR
 
-    os.makedirs(cache_dir, exist_ok=True)
+    pathlib.Path(cache_dir).mkdir(exist_ok=True, parents=True)
 
     return {
-        "small": generate_hierarchy_dataset(num_samples=25),
-        "medium": generate_hierarchy_dataset(num_samples=100),
-        "large": generate_hierarchy_dataset(num_samples=500),
+        "small": generate_hierarchy_dataset(num_samples=SMALL_SIZE),
+        "medium": generate_hierarchy_dataset(num_samples=MEDIUM_SIZE),
+        "large": generate_hierarchy_dataset(num_samples=LARGE_SIZE),
     }

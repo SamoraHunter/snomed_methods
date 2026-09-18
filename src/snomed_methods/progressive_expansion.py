@@ -9,10 +9,26 @@ a user's initial term, returning a comprehensive list of related SNOMED concepts
 with evidence tracking and confidence scoring.
 """
 
-import os
-from typing import Any, Dict, List, Optional, Set, Tuple
+from __future__ import annotations
 
-import numpy as np
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+
+
+@dataclass
+class ExpansionConfig:
+    """Configuration for progressive expansion pipeline."""
+
+    uk_path: str | None = None
+    medcat_path: str | None = None
+    model_path: str | None = None
+    backend: str = "transformers"
+    stages: list[str] | None = None
+    max_concepts: int = 100
 
 
 class ExpansionResult:
@@ -21,10 +37,10 @@ class ExpansionResult:
     def __init__(
         self,
         query: str,
-        stages_executed: List[str],
-        scores: Dict[str, float],
-        sources: Dict[str, List[str]],
-        semantic_type: Optional[str] = None,
+        stages_executed: list[str],
+        scores: dict[str, float],
+        sources: dict[str, list[str]],
+        semantic_type: str | None = None,
     ) -> None:
         self.query = query
         self.stages_executed = stages_executed
@@ -37,13 +53,13 @@ class ExpansionResult:
         return len({c for cuis in self.sources.values() for c in cuis})
 
     @property
-    def all_cuis(self) -> List[str]:
-        all_cuis: Set[str] = set()
+    def all_cuis(self) -> list[str]:
+        all_cuis: set[str] = set()
         for cuis in self.sources.values():
             all_cuis.update(cuis)
         return sorted(all_cuis)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "query": self.query,
             "stages_executed": self.stages_executed,
@@ -64,7 +80,7 @@ class ExpansionResult:
 class StageExecutor:
     """Base class for pipeline stages."""
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(self, query: str, existing_cuis: set[str]) -> tuple[list[str], float]:
         raise NotImplementedError
 
     def get_weight(self) -> float:
@@ -75,7 +91,11 @@ class TermMatchingStage(StageExecutor):
     """Stage 1: Direct fuzzy matching on SNOMED descriptions."""
 
     def __init__(
-        self, uk_path: Optional[str] = None, top_n: int = 50, match_prefix: bool = True
+        self,
+        uk_path: str | None = None,
+        top_n: int = 50,
+        *,
+        match_prefix: bool = True,
     ) -> None:
         self.uk_path = uk_path
         self.top_n = top_n
@@ -86,35 +106,29 @@ class TermMatchingStage(StageExecutor):
         if self._lookup is not None:
             return
         try:
-            from snomed_methods.snomed_term_lookup import (
+            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415 (lazy import for optional dependency)
                 create_term_lookup_from_directory,
             )
 
             uk_path = self.uk_path or self._get_fallback_uk_path()
             uk_path = uk_path or self._get_fallback_uk_path()
-            if os.path.exists(uk_path):
+            if Path(uk_path).exists():
                 self._lookup = create_term_lookup_from_directory(uk_path)
         except ImportError:
             pass
 
     def _get_fallback_uk_path(self) -> str:
-        uk_paths = [
-            os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "uk_sct2cl_42.2.0",
-                "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-            ),
-        ]
-        for path in uk_paths:
-            if os.path.exists(path):
-                return path
-        raise FileNotFoundError(f"SNOMED UK Clinical RF2 not found: {uk_paths}")
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "uk_sct2cl_42.2.0"
+            / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+        )
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(self, query: str, existing_cuis: set[str]) -> tuple[list[str], float]:
         self._init_lookup()
         if self._lookup is None:
             return [], 0.0
-        new_cuis: List[str] = []
+        new_cuis: list[str] = []
         confidence = 0.0
 
         # Try exact matches first
@@ -124,19 +138,21 @@ class TermMatchingStage(StageExecutor):
                 if cui not in existing_cuis and cui not in new_cuis:
                     new_cuis.append(cui)
                     confidence += 1.0 / (len(new_cuis) + 1)
-        except Exception:
+        except (ValueError, TypeError, RuntimeError):
             pass
 
         # Also try prefix matches for better recall
         try:
             prefix_matches = self._lookup.find_concepts_by_term(
-                query, ignore_case=True, match_prefix=True
+                query,
+                ignore_case=True,
+                match_prefix=True,
             )
             for cui, _ in prefix_matches[: int(self.top_n * 0.5)]:
                 if cui not in existing_cuis and cui not in new_cuis:
                     new_cuis.append(cui)
                     confidence += 1.2 / (len(new_cuis) + 1)
-        except Exception:
+        except (ValueError, TypeError, RuntimeError):
             pass
 
         return new_cuis, min(confidence, 1.0)
@@ -150,7 +166,7 @@ class HierarchyExpansionStage(StageExecutor):
 
     def __init__(
         self,
-        uk_path: Optional[str] = None,
+        uk_path: str | None = None,
         max_depth: int = 3,
         max_per_level: int = 10,
     ) -> None:
@@ -163,40 +179,37 @@ class HierarchyExpansionStage(StageExecutor):
         if self._relations is not None:
             return
         try:
-            from snomed_methods.snomed_methods_v1 import SnomedRelations
-
-            rel_file = os.path.join(
-                self.uk_path or self._get_fallback_uk_path(),
-                "Full",
-                "Terminology",
-                "sct2_Relationship_UKCLFull_GB1000000_20260603.txt",
+            from snomed_methods.snomed_methods_v1 import (  # noqa: PLC0415
+                SnomedRelations,
             )
-            if os.path.exists(rel_file):
-                self._relations = SnomedRelations(snomed_rf2_full_path=rel_file)
+
+            uk_path = self.uk_path or self._get_fallback_uk_path()
+            rel_file = (
+                Path(uk_path)
+                / "Full"
+                / "Terminology"
+                / "sct2_Relationship_UKCLFull_GB1000000_20260603.txt"
+            )
+            if rel_file.exists():
+                self._relations = SnomedRelations(snomed_rf2_full_path=str(rel_file))
         except ImportError:
             pass
 
     def _get_fallback_uk_path(self) -> str:
-        uk_paths = [
-            os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "uk_sct2cl_42.2.0",
-                "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-            ),
-        ]
-        for path in uk_paths:
-            if os.path.exists(path):
-                return path
-        raise FileNotFoundError(f"SNOMED UK Clinical RF2 not found: {uk_paths}")
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "uk_sct2cl_42.2.0"
+            / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+        )
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(self, _query: str, existing_cuis: set[str]) -> tuple[list[str], float]:
         self._init_relations()
         if self._relations is None:
             return [], 0.0
-        new_cuis: List[str] = []
+        new_cuis: list[str] = []
         confidence = 0.0
-        processed: Set[str] = set(existing_cuis)
-        queue: List[Tuple[str, int]] = [(str(c), 0) for c in existing_cuis]
+        processed: set[str] = set(existing_cuis)
+        queue: list[tuple[str, int]] = [(str(c), 0) for c in existing_cuis]
         while queue and len(processed) < self.max_per_level * (self.max_depth + 2):
             current, depth = queue.pop(0)
             if depth > self.max_depth:
@@ -209,12 +222,16 @@ class HierarchyExpansionStage(StageExecutor):
                 cui_int = int(current)
                 children = self._relations.get_children(cui_int)[: self.max_per_level]
                 parents = self._relations.get_parents(cui_int)[: self.max_per_level]
-                for child in children:
-                    if str(child) not in processed:
-                        queue.append((str(child), depth + 1))
-                for parent in parents:
-                    if str(parent) not in processed:
-                        queue.append((str(parent), depth + 1))
+                queue.extend(
+                    (str(child), depth + 1)
+                    for child in children
+                    if str(child) not in processed
+                )
+                queue.extend(
+                    (str(parent), depth + 1)
+                    for parent in parents
+                    if str(parent) not in processed
+                )
             except (ValueError, TypeError):
                 continue
         return new_cuis, min(confidence, 1.0)
@@ -228,9 +245,9 @@ class EmbeddingSimilarityStage(StageExecutor):
 
     def __init__(
         self,
-        model_path: Optional[str] = None,
+        model_path: str | None = None,
         backend: str = "transformers",
-        uk_path: Optional[str] = None,
+        uk_path: str | None = None,
         top_k: int = 50,
     ) -> None:
         self.model_path = model_path
@@ -244,24 +261,30 @@ class EmbeddingSimilarityStage(StageExecutor):
         if self._embedder is not None:
             return
         try:
-            from snomed_methods.llm_concept_embedder import ClinicalConceptEmbedder
+            from snomed_methods.llm_concept_embedder import (  # noqa: PLC0415
+                ClinicalConceptEmbedder,
+            )
 
             model_path = self.model_path or self._get_default_model_path()
-            if os.path.exists(model_path):
+            if Path(model_path).exists():
                 self._embedder = ClinicalConceptEmbedder(
-                    model_name_or_path=model_path,
+                    model_name_or_path=(
+                        str(model_path) if isinstance(model_path, Path) else model_path
+                    ),
                     backend=self.backend,
                     device="cpu",
                 )
         except ImportError:
             pass
 
-    def _init_search_engine(self, seed_cuis: List[str]) -> None:
+    def _init_search_engine(self, seed_cuis: list[str]) -> None:
         if self._search_engine is not None:
             return
         try:
-            from snomed_methods.llm_concept_embedder import ConceptVectorSearch
-            from snomed_methods.snomed_term_lookup import (
+            from snomed_methods.llm_concept_embedder import (  # noqa: PLC0415
+                ConceptVectorSearch,
+            )
+            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
                 create_term_lookup_from_directory,
             )
 
@@ -269,8 +292,8 @@ class EmbeddingSimilarityStage(StageExecutor):
                 self._init_embedder()
             uk_path = self.uk_path or self._get_fallback_uk_path()
             lookup = create_term_lookup_from_directory(uk_path)
-            cui_to_embedding: Dict[str, np.ndarray] = {}
-            names: Dict[str, str] = {}
+            cui_to_embedding: dict[str, np.ndarray] = {}
+            names: dict[str, str] = {}
             for cui in seed_cuis:
                 text = lookup.getconcept_info(cui)
                 if text and "preferred_name" in text:
@@ -285,29 +308,24 @@ class EmbeddingSimilarityStage(StageExecutor):
                 embedder=self._embedder,
             )
             self._search_engine.build_index(index_type="FlatIP")
-        except Exception:
+        except (ImportError, ValueError, TypeError, RuntimeError):
             pass
 
     def _get_default_model_path(self) -> str:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(
-            project_root, "embedding_models", "SapBERT-from-PubMedBERT-fulltext"
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "embedding_models"
+            / "SapBERT-from-PubMedBERT-fulltext",
         )
 
     def _get_fallback_uk_path(self) -> str:
-        uk_paths = [
-            os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "uk_sct2cl_42.2.0",
-                "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
-            ),
-        ]
-        for path in uk_paths:
-            if os.path.exists(path):
-                return path
-        raise FileNotFoundError(f"SNOMED UK Clinical RF2 not found: {uk_paths}")
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "uk_sct2cl_42.2.0"
+            / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+        )
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(self, query: str, existing_cuis: set[str]) -> tuple[list[str], float]:
         if not existing_cuis:
             return [], 0.0
         self._init_embedder()
@@ -315,9 +333,9 @@ class EmbeddingSimilarityStage(StageExecutor):
             self._init_search_engine(list(existing_cuis))
         if self._search_engine is None or self._embedder is None:
             return [], 0.0
-        results: List[str] = []
+        results: list[str] = []
         confidence = 0.0
-        seen: Set[str] = set()
+        seen: set[str] = set()
         try:
             search_results = self._search_engine.search(query, top_k=self.top_k * 2)
             for cui, _name, score in search_results[: self.top_k]:
@@ -325,7 +343,7 @@ class EmbeddingSimilarityStage(StageExecutor):
                     results.append(str(cui))
                     confidence += float(score)
                     seen.add(str(cui))
-        except Exception:
+        except (ValueError, TypeError, RuntimeError):
             pass
         return results, min(confidence, 1.0)
 
@@ -337,7 +355,10 @@ class MedCatExpansionStage(StageExecutor):
     """Stage 4: Co-occurrence based expansion using MedCAT."""
 
     def __init__(
-        self, medcat_path: Optional[str] = None, top_n: int = 50, min_sim: float = 0.1
+        self,
+        medcat_path: str | None = None,
+        top_n: int = 50,
+        min_sim: float = 0.1,
     ) -> None:
         self.medcat_path = medcat_path
         self.top_n = top_n
@@ -348,49 +369,46 @@ class MedCatExpansionStage(StageExecutor):
         if self._medcat is not None:
             return
         try:
-            from medcat.cat import CAT
+            from medcat.cat import CAT  # noqa: PLC0415
 
             medcat_path = self.medcat_path or self._get_default_medcat_path()
-            if os.path.exists(medcat_path):
+            if Path(medcat_path).exists():
                 self._medcat = CAT.load_model_pack(medcat_path)
         except ImportError:
             pass
 
     def _get_default_medcat_path(self) -> str:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(script_dir)
-        return os.path.join(
-            project_root, "model_packs", "medcat_model_pack_422d1d38fc58f158.zip"
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "model_packs"
+            / "medcat_model_pack_422d1d38fc58f158.zip",
         )
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(self, _query: str, existing_cuis: set[str]) -> tuple[list[str], float]:
         self._init_medcat()
         if self._medcat is None or not hasattr(self._medcat, "cdb"):
             return [], 0.0
-        new_cuis: List[str] = []
+        new_cuis: list[str] = []
         confidence = 0.0
-        seen: Set[str] = set()
+        seen: set[str] = set()
         cdb = self._medcat.cdb
         for cui in list(existing_cuis)[:10]:
-            try:
-                sim_results = cdb.most_similar(
-                    cui,
-                    context_type="long",
-                    topn=self.top_n,
-                )
-                for sim_cui, sim_data in sim_results.items():
-                    if (
-                        sim_cui not in existing_cuis
-                        and sim_cui not in seen
-                        and str(sim_cui) not in new_cuis
-                    ):
-                        sim_score = sim_data.get("sim", 0)
-                        if sim_score >= self.min_sim:
-                            new_cuis.append(str(sim_cui))
-                            confidence += sim_score
-                            seen.add(sim_cui)
-            except Exception:
-                continue
+            sim_results = cdb.most_similar(
+                cui,
+                context_type="long",
+                topn=self.top_n,
+            )
+            for sim_cui, sim_data in sim_results.items():
+                if (
+                    sim_cui not in existing_cuis
+                    and sim_cui not in seen
+                    and str(sim_cui) not in new_cuis
+                ):
+                    sim_score = sim_data.get("sim", 0)
+                    if sim_score >= self.min_sim:
+                        new_cuis.append(str(sim_cui))
+                        confidence += sim_score
+                        seen.add(sim_cui)
         return new_cuis, min(confidence, 1.0)
 
     def get_weight(self) -> float:
@@ -410,9 +428,13 @@ class LLMExpansionStage(StageExecutor):
         self.model_name = model_name
         self.max_new_terms = max_new_terms
 
-    def execute(self, query: str, existing_cuis: Set[str]) -> Tuple[List[str], float]:
+    def execute(
+        self,
+        query: str,
+        _existing_cuis: set[str],
+    ) -> tuple[list[str], float]:
         confidence = 0.5
-        new_terms: List[str] = []
+        new_terms: list[str] = []
         prompt = (
             f'Given the medical term "{query}", '
             f"suggest {self.max_new_terms} related clinical terms or concepts. "
@@ -424,9 +446,9 @@ class LLMExpansionStage(StageExecutor):
             new_terms = self._generate_hf(prompt)
         return new_terms[: self.max_new_terms], confidence
 
-    def _generate_ollama(self, prompt: str) -> List[str]:
+    def _generate_ollama(self, prompt: str) -> list[str]:
         try:
-            import ollama
+            import ollama  # noqa: PLC0415
 
             response = ollama.chat(
                 model=self.model_name,
@@ -443,12 +465,12 @@ class LLMExpansionStage(StageExecutor):
             )
             content = response["message"]["content"].strip()
             return [t.strip() for t in content.split(",") if t.strip()]
-        except Exception:
+        except (ValueError, TypeError, RuntimeError):
             return []
 
-    def _generate_hf(self, prompt: str) -> List[str]:
+    def _generate_hf(self, prompt: str) -> list[str]:
         try:
-            from transformers import pipeline
+            from transformers import pipeline  # noqa: PLC0415
 
             generator = pipeline(
                 "text-generation",
@@ -461,7 +483,7 @@ class LLMExpansionStage(StageExecutor):
             if ":" in text:
                 text = text.split(":")[-1]
             return [t.strip() for t in text.split(",") if t.strip()]
-        except Exception:
+        except (ValueError, TypeError, RuntimeError):
             return []
 
     def get_weight(self) -> float:
@@ -475,9 +497,9 @@ class ProgressiveExpansionPipeline:
 
     def __init__(
         self,
-        uk_path: Optional[str] = None,
-        medcat_path: Optional[str] = None,
-        model_path: Optional[str] = None,
+        uk_path: str | None = None,
+        medcat_path: str | None = None,
+        model_path: str | None = None,
         backend: str = "transformers",
     ) -> None:
         self.uk_path = uk_path
@@ -487,7 +509,9 @@ class ProgressiveExpansionPipeline:
         self.stages = {
             "term": TermMatchingStage(uk_path=uk_path, top_n=100),
             "hierarchy": HierarchyExpansionStage(
-                uk_path=uk_path, max_depth=3, max_per_level=20
+                uk_path=uk_path,
+                max_depth=3,
+                max_per_level=20,
             ),
             "embedding": EmbeddingSimilarityStage(
                 uk_path=uk_path,
@@ -496,7 +520,9 @@ class ProgressiveExpansionPipeline:
                 top_k=50,
             ),
             "medcat": MedCatExpansionStage(
-                medcat_path=medcat_path, top_n=50, min_sim=0.1
+                medcat_path=medcat_path,
+                top_n=50,
+                min_sim=0.1,
             ),
             "llm": LLMExpansionStage(backend=backend, model_name="qwen2.5-coder"),
         }
@@ -504,16 +530,16 @@ class ProgressiveExpansionPipeline:
     def expand(
         self,
         query: str,
-        stages: Optional[List[str]] = None,
+        stages: list[str] | None = None,
         max_concepts: int = 100,
-        stage_weights: Optional[Dict[str, float]] = None,
-    ) -> "ExpandedExpansionResult":
+        stage_weights: dict[str, float] | None = None,
+    ) -> ExpandedExpansionResult:
         if stages is None:
             stages = list(self.stages.keys())
-        executed_stages: List[str] = []
-        all_cuis: Set[str] = set()
-        stage_sources: Dict[str, List[str]] = {}
-        stage_scores: Dict[str, float] = {}
+        executed_stages: list[str] = []
+        all_cuis: set[str] = set()
+        stage_sources: dict[str, list[str]] = {}
+        stage_scores: dict[str, float] = {}
 
         for stage_name in stages:
             if stage_name not in self.stages:
@@ -547,16 +573,16 @@ class ExpandedExpansionResult:
     def __init__(
         self,
         query: str,
-        stages_executed: List[str],
-        scores: Dict[str, float],
-        sources: Dict[str, List[str]],
+        stages_executed: list[str],
+        scores: dict[str, float],
+        sources: dict[str, list[str]],
     ) -> None:
         self.query = query
         self.stages_executed = stages_executed
         self.scores = scores
         self.sources = sources
-        self._cui_to_name: Dict[str, str] = {}
-        self._stage_weights: Dict[str, float] = {
+        self._cui_to_name: dict[str, str] = {}
+        self._stage_weights: dict[str, float] = {
             "term": 0.5,
             "hierarchy": 0.3,
             "embedding": 0.3,
@@ -564,7 +590,7 @@ class ExpandedExpansionResult:
             "llm": 0.1,
         }
 
-    def set_stage_weights(self, weights: Dict[str, float]) -> None:
+    def set_stage_weights(self, weights: dict[str, float]) -> None:
         self._stage_weights.update(weights)
 
     @property
@@ -572,29 +598,29 @@ class ExpandedExpansionResult:
         return len({c for cuis in self.sources.values() for c in cuis})
 
     @property
-    def all_cuis(self) -> List[str]:
-        all_cuis: Set[str] = set()
+    def all_cuis(self) -> list[str]:
+        all_cuis: set[str] = set()
         for cuis in self.sources.values():
             all_cuis.update(cuis)
         return sorted(all_cuis)
 
     def get_concepts_with_names(
         self,
-        uk_path: Optional[str] = None,
-    ) -> List[Tuple[str, str]]:
+        uk_path: str | None = None,
+    ) -> list[tuple[str, str]]:
         """Get concepts with preferred names."""
         if not self.all_cuis:
             return []
 
         try:
-            from snomed_methods.snomed_term_lookup import (
+            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
                 create_term_lookup_from_directory,
             )
 
             uk_path = uk_path or self._get_fallback_uk_path()
             lookup = create_term_lookup_from_directory(uk_path)
 
-            results: List[Tuple[str, str]] = []
+            results: list[tuple[str, str]] = []
             for cui in sorted(self.all_cuis):
                 info = lookup.getconcept_info(cui)
                 if info and "preferred_name" in info:
@@ -603,11 +629,12 @@ class ExpandedExpansionResult:
                     preferred_name = f"CUI: {cui}"
                 results.append((cui, preferred_name))
 
-            return results
-        except Exception:
+        except (ImportError, ValueError, TypeError, RuntimeError):
             return [(c, f"CUI: {c}") for c in self.all_cuis]
 
-    def to_dict(self) -> Dict:
+        return results
+
+    def to_dict(self) -> dict:
         """Convert result to dictionary."""
         concepts = self.get_concepts_with_names()
         return {
@@ -619,10 +646,10 @@ class ExpandedExpansionResult:
             "sources": self.sources,
         }
 
-    def to_dataframe(self) -> Any:
+    def to_dataframe(self) -> object | None:
         """Convert to pandas DataFrame."""
         try:
-            import pandas as pd
+            import pandas as pd  # noqa: PLC0415
 
             concepts = self.get_concepts_with_names()
             rows = []
@@ -645,12 +672,10 @@ class ExpandedExpansionResult:
 
     @staticmethod
     def _get_fallback_uk_path() -> str:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(script_dir)
-        return os.path.join(
-            project_root,
-            "uk_sct2cl_42.2.0",
-            "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
+        return str(
+            Path(__file__).resolve().parents[1]
+            / "uk_sct2cl_42.2.0"
+            / "SnomedCT_UKClinicalRF2_PRODUCTION_20260603T000001Z",
         )
 
     def __repr__(self) -> str:
@@ -663,18 +688,19 @@ class ExpandedExpansionResult:
 
 def expand_progressive(
     query: str,
-    uk_path: Optional[str] = None,
-    medcat_path: Optional[str] = None,
-    model_path: Optional[str] = None,
-    backend: str = "transformers",
-    stages: Optional[List[str]] = None,
-    max_concepts: int = 100,
+    config: ExpansionConfig | None = None,
 ) -> ExpandedExpansionResult:
     """Convenience function for progressive concept expansion."""
+    if config is None:
+        config = ExpansionConfig()
     pipeline = ProgressiveExpansionPipeline(
-        uk_path=uk_path,
-        medcat_path=medcat_path,
-        model_path=model_path,
-        backend=backend,
+        uk_path=config.uk_path,
+        medcat_path=config.medcat_path,
+        model_path=config.model_path,
+        backend=config.backend,
     )
-    return pipeline.expand(query, stages=stages, max_concepts=max_concepts)
+    return pipeline.expand(
+        query,
+        stages=config.stages,
+        max_concepts=config.max_concepts,
+    )

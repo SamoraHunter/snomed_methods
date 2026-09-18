@@ -2,6 +2,7 @@
 """Pytest unit tests for RAG (Retrieval-Augmented Generation) module."""
 
 import os
+import pathlib
 import tempfile
 
 import numpy as np
@@ -48,7 +49,7 @@ def sample_data_names():
 class TestRAGRetrieverInit:
     """Tests for RAGRetriever initialization."""
 
-    def test_init_with_embedder(self, mock_embedder):
+    def test_init_with_embedder(self, mock_embedder) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         cui_to_embedding = {"C001": np.random.randn(384)}
@@ -62,15 +63,18 @@ class TestRAGRetrieverInit:
         assert len(retriever.cui_to_embedding) == 1
         assert retriever.index is not None
 
-    def test_init_without_embedder(self):
+    def test_init_without_embedder(self) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with pytest.raises(ValueError, match="No embeddings available to build index"):
             RAGRetriever()
 
     def test_init_with_index_path(
-        self, mock_embedder, sample_data_embeddings, sample_data_names
-    ):
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+        sample_data_names,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -85,7 +89,7 @@ class TestRAGRetrieverInit:
             assert retriever2.index is not None
             assert len(retriever2.cui_list) == 4
 
-    def test_init_with_index_only(self, mock_embedder, sample_data_embeddings):
+    def test_init_with_index_only(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -104,8 +108,11 @@ class TestRAGRetrieverRetrieve:
     """Tests for RAGRetriever retrieve method."""
 
     def test_retrieve_basic(
-        self, mock_embedder, sample_data_embeddings, sample_data_names
-    ):
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+        sample_data_names,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = RAGRetriever(
@@ -120,7 +127,7 @@ class TestRAGRetrieverRetrieve:
             assert isinstance(results[0], tuple)
             assert len(results[0]) == 3
 
-    def test_retrieve_without_index(self):
+    def test_retrieve_without_index(self) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = object.__new__(RAGRetriever)
@@ -128,7 +135,11 @@ class TestRAGRetrieverRetrieve:
         with pytest.raises(ValueError, match="Index not built or loaded"):
             retriever.retrieve("test query")
 
-    def test_retrieve_return_scores_false(self, mock_embedder, sample_data_embeddings):
+    def test_retrieve_return_scores_false(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = RAGRetriever(
@@ -139,7 +150,7 @@ class TestRAGRetrieverRetrieve:
         if len(results) > 0:
             assert results[0][2] == 1.0
 
-    def test_retrieve_top_k_1(self, mock_embedder, sample_data_embeddings):
+    def test_retrieve_top_k_1(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = RAGRetriever(
@@ -153,33 +164,45 @@ class TestRAGRetrieverRetrieve:
 class TestRAGRetrieverIndexOperations:
     """Tests for index save/load operations."""
 
-    def test_save_faiss_with_extension(self, mock_embedder, sample_data_embeddings):
+    def test_save_faiss_with_extension(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            index_path = os.path.join(tmpdir, "rag_index.faiss")
+            index_path = pathlib.Path(tmpdir) / "rag_index.faiss"
             retriever1 = RAGRetriever(
                 embedder=mock_embedder,
                 cui_to_embedding=dict(sample_data_embeddings),
             )
             retriever1.save_index(index_path)
             assert os.path.exists(index_path)
-            assert os.path.getsize(index_path) > 0
+            assert index_path.stat().st_size > 0
 
-    def test_save_pickle_with_extension(self, mock_embedder, sample_data_embeddings):
+    def test_save_pickle_with_extension(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            index_path = os.path.join(tmpdir, "rag_index.pkl")
+            index_path = pathlib.Path(tmpdir) / "rag_index.pkl"
             retriever1 = RAGRetriever(
                 embedder=mock_embedder,
                 cui_to_embedding=dict(sample_data_embeddings),
             )
             retriever1.save_index(index_path)
             assert os.path.exists(index_path)
-            assert os.path.getsize(index_path) > 0
+            assert index_path.stat().st_size > 0
 
-    def test_save_with_no_extension(self, mock_embedder, sample_data_embeddings):
+    def test_save_with_no_extension(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -191,7 +214,7 @@ class TestRAGRetrieverIndexOperations:
             retriever1.save_index(index_path)
             assert os.path.exists(index_path + ".faiss")
 
-    def test_load_faiss_file(self, mock_embedder, sample_data_embeddings):
+    def test_load_faiss_file(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -206,7 +229,7 @@ class TestRAGRetrieverIndexOperations:
             assert retriever2.index is not None
             assert hasattr(retriever2, "embedding_dim")
 
-    def test_load_pickle_file(self, mock_embedder, sample_data_embeddings):
+    def test_load_pickle_file(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -221,7 +244,11 @@ class TestRAGRetrieverIndexOperations:
             assert retriever2.index is not None
             assert len(retriever2.cui_list) == 4
 
-    def test_load_with_no_extension(self, mock_embedder, sample_data_embeddings):
+    def test_load_with_no_extension(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -240,25 +267,25 @@ class TestRAGRetrieverIndexOperations:
 class TestRAGExplanationsInit:
     """Tests for RAGExplanations initialization."""
 
-    def test_init_default_backend(self):
+    def test_init_default_backend(self) -> None:
         from src.snomed_methods.rag import RAGExplanations
 
         explanations = RAGExplanations()
         assert explanations.backend == "ollama"
 
-    def test_init_ollama_backend(self, mock_embedder):
+    def test_init_ollama_backend(self, mock_embedder) -> None:
         from src.snomed_methods.rag import RAGExplanations
 
         explanations = RAGExplanations(embedder=mock_embedder, backend="ollama")
         assert explanations.backend == "ollama"
 
-    def test_init_hf_backend(self, mock_embedder):
+    def test_init_hf_backend(self, mock_embedder) -> None:
         from src.snomed_methods.rag import RAGExplanations
 
         explanations = RAGExplanations(embedder=mock_embedder, backend="hf")
         assert explanations.backend == "hf"
 
-    def test_init_custom_model(self, mock_embedder):
+    def test_init_custom_model(self, mock_embedder) -> None:
         from src.snomed_methods.rag import RAGExplanations
 
         explanations = RAGExplanations(model_name="custom-model")
@@ -268,7 +295,7 @@ class TestRAGExplanationsInit:
 class TestRAGChatInit:
     """Tests for RAGChat initialization."""
 
-    def test_init_with_retriever(self, mock_embedder, sample_data_embeddings):
+    def test_init_with_retriever(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -279,7 +306,11 @@ class TestRAGChatInit:
         assert chat.retriever is not None
         assert len(chat.conversation_history) == 0
 
-    def test_init_with_explanations(self, mock_embedder, sample_data_embeddings):
+    def test_init_with_explanations(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
 
         retriever = RAGRetriever(
@@ -290,7 +321,7 @@ class TestRAGChatInit:
         chat = RAGChat(retriever=retriever, explanations=explanations)
         assert chat.explanations is not None
 
-    def test_init_custom_max_turns(self, mock_embedder, sample_data_embeddings):
+    def test_init_custom_max_turns(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -304,7 +335,7 @@ class TestRAGChatInit:
 class TestRAGChatAsk:
     """Tests for RAGChat ask method."""
 
-    def test_ask_basic(self, mock_embedder, sample_data_embeddings):
+    def test_ask_basic(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -317,7 +348,7 @@ class TestRAGChatAsk:
         assert "results" in response
         assert len(response["results"]) <= 3
 
-    def test_ask_with_explanations(self, mock_embedder, sample_data_embeddings):
+    def test_ask_with_explanations(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
 
         retriever = RAGRetriever(
@@ -330,7 +361,7 @@ class TestRAGChatAsk:
         if "explanations" in response:
             assert isinstance(response["explanations"], list)
 
-    def test_ask_stores_history(self, mock_embedder, sample_data_embeddings):
+    def test_ask_stores_history(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -342,7 +373,11 @@ class TestRAGChatAsk:
         chat.ask(query="second question")
         assert len(chat.conversation_history) == 2
 
-    def test_ask_with_max_context_limit(self, mock_embedder, sample_data_embeddings):
+    def test_ask_with_max_context_limit(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -358,7 +393,7 @@ class TestRAGChatAsk:
 class TestRAGChatFollowUp:
     """Tests for RAGChat follow_up method."""
 
-    def test_follow_up_basic(self, mock_embedder, sample_data_embeddings):
+    def test_follow_up_basic(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -370,7 +405,11 @@ class TestRAGChatFollowUp:
         response = chat.follow_up(feedback="refined")
         assert "results" in response
 
-    def test_follow_up_without_refine(self, mock_embedder, sample_data_embeddings):
+    def test_follow_up_without_refine(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -379,11 +418,16 @@ class TestRAGChatFollowUp:
         )
         chat = RAGChat(retriever=retriever)
         response = chat.follow_up(
-            feedback="independent query", refine_with_previous=False
+            feedback="independent query",
+            refine_with_previous=False,
         )
         assert "results" in response
 
-    def test_follow_up_stores_history(self, mock_embedder, sample_data_embeddings):
+    def test_follow_up_stores_history(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -399,7 +443,7 @@ class TestRAGChatFollowUp:
 class TestRAGChatReset:
     """Tests for RAGChat reset method."""
 
-    def test_reset_basic(self, mock_embedder, sample_data_embeddings):
+    def test_reset_basic(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -411,7 +455,7 @@ class TestRAGChatReset:
         chat.reset()
         assert len(chat.conversation_history) == 0
 
-    def test_reset_empty_history(self, mock_embedder, sample_data_embeddings):
+    def test_reset_empty_history(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -426,7 +470,11 @@ class TestRAGChatReset:
 class TestRAGEdgeCases:
     """Tests for edge cases in RAG module."""
 
-    def test_retrieve_with_empty_query(self, mock_embedder, sample_data_embeddings):
+    def test_retrieve_with_empty_query(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = RAGRetriever(
@@ -436,7 +484,7 @@ class TestRAGEdgeCases:
         results = retriever.retrieve("", top_k=5)
         assert isinstance(results, list)
 
-    def test_chat_with_empty_query(self, mock_embedder, sample_data_embeddings):
+    def test_chat_with_empty_query(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 
         retriever = RAGRetriever(
@@ -449,8 +497,10 @@ class TestRAGEdgeCases:
         assert response["query"] == ""
 
     def test_retriever_with_very_large_top_k(
-        self, mock_embedder, sample_data_embeddings
-    ):
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         from src.snomed_methods.rag import RAGRetriever
 
         retriever = RAGRetriever(
@@ -464,7 +514,7 @@ class TestRAGEdgeCases:
 class TestIntegration:
     """Integration tests for RAG module."""
 
-    def test_complete_rag_workflow(self, mock_embedder, sample_data_embeddings):
+    def test_complete_rag_workflow(self, mock_embedder, sample_data_embeddings) -> None:
         from src.snomed_methods.rag import RAGChat, RAGExplanations, RAGRetriever
 
         retriever = RAGRetriever(
@@ -480,7 +530,11 @@ class TestIntegration:
         chat.reset()
         assert len(chat.conversation_history) == 0
 
-    def test_conversation_history_append(self, mock_embedder, sample_data_embeddings):
+    def test_conversation_history_append(
+        self,
+        mock_embedder,
+        sample_data_embeddings,
+    ) -> None:
         """Test that conversation history is properly appended."""
         from src.snomed_methods.rag import RAGChat, RAGRetriever
 

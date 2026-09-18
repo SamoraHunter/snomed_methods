@@ -2,14 +2,25 @@
 # SPDX-License-Identifier: MIT
 """Evaluation metrics and utilities for embedding semantic similarity benchmarking."""
 
-from typing import Any, List, Tuple
+from __future__ import annotations
 
 import numpy as np
+from scipy import stats
+
+_CLASSIFICATION_THRESHOLD = 500.0
+
+
+class _Embedder:
+    def generate_embeddings(
+        self,
+        texts: list[str],
+        batch_size: int,
+    ) -> list[list[float]]: ...
 
 
 def accuracy_at_threshold(
-    similarity_scores: List[float],
-    true_labels: List[bool],
+    similarity_scores: list[float],
+    true_labels: list[bool],
     threshold: float = 0.5,
 ) -> float:
     """Compute classification accuracy at a given similarity threshold.
@@ -21,6 +32,7 @@ def accuracy_at_threshold(
 
     Returns:
         Accuracy (fraction of correct classifications)
+
     """
     predictions = [score >= threshold for score in similarity_scores]
     correct = sum(p == t for p, t in zip(predictions, true_labels))
@@ -28,10 +40,10 @@ def accuracy_at_threshold(
 
 
 def precision_recall_f1(
-    similarity_scores: List[float],
-    true_labels: List[bool],
+    similarity_scores: list[float],
+    true_labels: list[bool],
     threshold: float = 0.5,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Compute precision, recall, and F1 at given threshold.
 
     Args:
@@ -41,6 +53,7 @@ def precision_recall_f1(
 
     Returns:
         Tuple of (precision, recall, f1)
+
     """
     predictions = [score >= threshold for score in similarity_scores]
 
@@ -60,8 +73,8 @@ def precision_recall_f1(
 
 
 def auc_pr(
-    similarity_scores: List[float],
-    true_labels: List[bool],
+    similarity_scores: list[float],
+    true_labels: list[bool],
 ) -> float:
     """Compute Area Under Precision-Recall Curve.
 
@@ -71,13 +84,15 @@ def auc_pr(
 
     Returns:
         AUC-PR score (0-1, higher is better)
+
     """
     if not similarity_scores or not true_labels:
         return 0.0
 
-    # Sort by scores descending
     sorted_pairs = sorted(
-        zip(similarity_scores, true_labels), key=lambda x: x[0], reverse=True
+        zip(similarity_scores, true_labels),
+        key=lambda x: x[0],
+        reverse=True,
     )
 
     precisions = []
@@ -93,17 +108,15 @@ def auc_pr(
         else:
             fp += 1
 
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        recall = tp / total_positives if total_positives > 0 else 0.0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / total_positives if total_positives > 0 else 0.0
 
-        precisions.append(precision)
-        recalls.append(recall)
+    precisions.append(precision)
+    recalls.append(recall)
 
-    # Compute AUC using trapezoidal rule
     if len(recalls) == 0:
         auc = 0.0
     elif len(recalls) == 1:
-        # Single point: use rectangle rule (precision at that recall)
         auc = precisions[0] * recalls[0]
     else:
         auc = 0.0
@@ -116,8 +129,8 @@ def auc_pr(
 
 
 def mean_squared_error_similarity(
-    predicted_scores: List[float],
-    reference_scores: List[float],
+    predicted_scores: list[float],
+    reference_scores: list[float],
 ) -> float:
     """Compute MSE between predicted and reference similarity scores.
 
@@ -127,23 +140,27 @@ def mean_squared_error_similarity(
 
     Returns:
         Mean squared error
+
     """
     if len(predicted_scores) != len(reference_scores):
-        raise ValueError(
+        msg = (
             f"Scores must have same length "
             f"(got {len(predicted_scores)} vs {len(reference_scores)})"
         )
+        raise ValueError(
+            msg,
+        )
 
     return float(
-        np.mean((np.array(predicted_scores) - np.array(reference_scores)) ** 2)
+        np.mean((np.array(predicted_scores) - np.array(reference_scores)) ** 2),
     )
 
 
 def correlation_similarity(
-    predicted_scores: List[float],
-    reference_scores: List[float],
+    predicted_scores: list[float],
+    reference_scores: list[float],
     method: str = "spearman",
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """Compute correlation between predicted and reference similarity scores.
 
     Args:
@@ -153,13 +170,15 @@ def correlation_similarity(
 
     Returns:
         Tuple of (correlation_coefficient, p_value)
-    """
-    from scipy import stats
 
+    """
     if len(predicted_scores) != len(reference_scores):
-        raise ValueError(
+        msg = (
             f"Scores must have same length "
             f"(got {len(predicted_scores)} vs {len(reference_scores)})"
+        )
+        raise ValueError(
+            msg,
         )
 
     if method == "spearman":
@@ -167,7 +186,8 @@ def correlation_similarity(
     elif method == "pearson":
         corr, p_value = stats.pearsonr(predicted_scores, reference_scores)
     else:
-        raise ValueError(f"Unknown correlation method: {method}")
+        msg = f"Unknown correlation method: {method}"
+        raise ValueError(msg)
 
     return float(corr), float(p_value)
 
@@ -180,6 +200,7 @@ def _extract_concept_pair(sample: dict) -> tuple[str, str] | None:
 
     Returns:
         Tuple of (concept_1, concept_2) strings, or None if invalid.
+
     """
     if "concept_1" in sample and "concept_2" in sample:
         return str(sample["concept_1"]), str(sample["concept_2"])
@@ -189,7 +210,7 @@ def _extract_concept_pair(sample: dict) -> tuple[str, str] | None:
 
 
 def _process_similarity_sample(
-    embedder: Any,
+    embedder: _Embedder,
     concept_1: str,
     concept_2: str,
 ) -> tuple[float | None, float | None]:
@@ -201,6 +222,7 @@ def _process_similarity_sample(
 
     Returns:
         Tuple of (normalized_score, reference_score) or (None, None) on failure.
+
     """
     try:
         emb1 = embedder.generate_embeddings([concept_1], batch_size=1)[0]
@@ -209,17 +231,18 @@ def _process_similarity_sample(
         similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
         score = float(similarity)
         normalized_score = (score + 1) / 2
-        return normalized_score, None
-
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
         return None, None
+    else:
+        return normalized_score, None
 
 
 def evaluate_embedding_similarity(
-    embedder: Any,
+    embedder: _Embedder,
     dataset: list[dict],
     threshold: float = 0.5,
-    use_umnsrs_scores: bool = True,
+    *,
+    use_umnsrs_scores: bool | None = None,
 ) -> dict:
     """Evaluate an embedding model on semantic similarity benchmark.
 
@@ -232,6 +255,7 @@ def evaluate_embedding_similarity(
 
     Returns:
         Dict with evaluation metrics
+
     """
     if not dataset:
         return {
@@ -259,11 +283,13 @@ def evaluate_embedding_similarity(
 
         similarity_scores.append(normalized_score)
 
-        if use_umnsrs_scores:
+        if use_umnsrs_scores or (
+            use_umnsrs_scores is None and sample.get("umnsrs_score")
+        ):
             score_field = sample.get("label") or sample.get("umnsrs_score")
             if score_field is not None:
                 reference_scores.append(float(score_field) / 1000.0)
-                true_labels.append(float(score_field) >= 500)
+                true_labels.append(float(score_field) >= _CLASSIFICATION_THRESHOLD)
         else:
             true_labels.append(bool(sample.get("is_similar", False)))
             reference_scores.append(1.0 if sample.get("is_similar") else 0.0)
@@ -273,17 +299,23 @@ def evaluate_embedding_similarity(
 
     accuracy = accuracy_at_threshold(similarity_scores, true_labels, threshold)
     precision, recall, f1 = precision_recall_f1(
-        similarity_scores, true_labels, threshold
+        similarity_scores,
+        true_labels,
+        threshold,
     )
 
     if reference_scores:
         auc_pr_score = auc_pr(similarity_scores, true_labels)
         mse = mean_squared_error_similarity(similarity_scores, reference_scores)
         spearman_corr, spearman_p = correlation_similarity(
-            similarity_scores, reference_scores, method="spearman"
+            similarity_scores,
+            reference_scores,
+            method="spearman",
         )
         pearson_corr, pearson_p = correlation_similarity(
-            similarity_scores, reference_scores, method="pearson"
+            similarity_scores,
+            reference_scores,
+            method="pearson",
         )
     else:
         auc_pr_score = 0.0

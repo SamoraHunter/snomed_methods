@@ -6,7 +6,7 @@ import pytest
 class TestUMLSCIMapper:
     """Tests for the UMLSCIMapper class."""
 
-    def test_initialization_without_paths(self):
+    def test_initialization_without_paths(self) -> None:
         """Test that mapper can be initialized without file paths."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -15,7 +15,7 @@ class TestUMLSCIMapper:
         assert mapper.international_path is None
         assert mapper.simple_map_file is None
 
-    def test_initialization_with_paths(self):
+    def test_initialization_with_paths(self) -> None:
         """Test initialization with explicit file paths."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -28,7 +28,7 @@ class TestUMLSCIMapper:
         assert mapper.international_path == "/test/intl"
         assert mapper.simple_map_file == "/test/map.txt"
 
-    def test_load_snomed_to_umls_no_file(self):
+    def test_load_snomed_to_umls_no_file(self) -> None:
         """Test loading when no mapping file is available."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -37,7 +37,7 @@ class TestUMLSCIMapper:
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_map_to_umls_no_mappings(self):
+    def test_map_to_umls_no_mappings(self) -> None:
         """Test mapping for a CUI with no mappings in file."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -46,7 +46,7 @@ class TestUMLSCIMapper:
         assert isinstance(result, list)
         assert len(result) == 0
 
-    def test_map_from_umls_no_mappings(self):
+    def test_map_from_umls_no_mappings(self) -> None:
         """Test reverse mapping for a CUI with no mappings."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -55,7 +55,7 @@ class TestUMLSCIMapper:
         assert isinstance(result, list)
         assert len(result) == 0
 
-    def test_bidirectional_map_snomed(self):
+    def test_bidirectional_map_snomed(self) -> None:
         """Test bidirectional mapping from SNOMED."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -63,7 +63,7 @@ class TestUMLSCIMapper:
         result = mapper.bidirectional_map("409681000000102", "SNOMED")
         assert isinstance(result, list)
 
-    def test_bidirectional_map_umls(self):
+    def test_bidirectional_map_umls(self) -> None:
         """Test bidirectional mapping from UMLS CUI."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -71,7 +71,7 @@ class TestUMLSCIMapper:
         result = mapper.bidirectional_map("C0023957", "UMLS_CUI")
         assert isinstance(result, list)
 
-    def test_get_all_mappings_snomed(self):
+    def test_get_all_mappings_snomed(self) -> None:
         """Get all mappings for SNOMED concept."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -81,7 +81,7 @@ class TestUMLSCIMapper:
         assert "snomed_cui" in result
         assert "umls_cuis" in result
 
-    def test_get_all_mappings_umls(self):
+    def test_get_all_mappings_umls(self) -> None:
         """Get all mappings for UMLS CUI."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -95,21 +95,21 @@ class TestUMLSCIMapper:
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
 
-    def test_map_to_umls(self):
+    def test_map_to_umls(self) -> None:
         """Test map_to_umls function."""
         from snomed_methods.umlsci_mapper import map_to_umls
 
         result = map_to_umls("409681000000102")
         assert isinstance(result, list)
 
-    def test_map_from_umls(self):
+    def test_map_from_umls(self) -> None:
         """Test map_from_umls function."""
         from snomed_methods.umlsci_mapper import map_from_umls
 
         result = map_from_umls("C0023957")
         assert isinstance(result, list)
 
-    def test_batch_map_to_umls(self):
+    def test_batch_map_to_umls(self) -> None:
         """Test batch mapping."""
         from snomed_methods.umlsci_mapper import batch_map_to_umls
 
@@ -121,7 +121,7 @@ class TestConvenienceFunctions:
 class TestUmlsCuiDetection:
     """Tests for UMLS CUI format detection."""
 
-    def test_valid_umls_cui(self):
+    def test_valid_umls_cui(self) -> None:
         """Test valid UMLS CUI format."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 
@@ -129,7 +129,7 @@ class TestUmlsCuiDetection:
         assert mapper._is_umls_cui("C0023957") is True
         assert mapper._is_umls_cui("C1234567") is True
 
-    def test_invalid_umls_cui(self):
+    def test_invalid_umls_cui(self) -> None:
         """Test invalid UMLS CUI formats."""
         from snomed_methods.umlsci_mapper import UMLSCIMapper
 

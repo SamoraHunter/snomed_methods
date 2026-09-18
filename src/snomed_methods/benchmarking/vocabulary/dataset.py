@@ -7,8 +7,15 @@ It extracts actual mappings from the Simple Map reference set files rather than
 using synthetic/pseudo-random codes.
 """
 
+from __future__ import annotations
+
 import os
-from typing import Dict, List, Optional
+import pathlib
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 try:
     from datasets import DatasetDict
@@ -18,7 +25,7 @@ except ImportError:
         pass
 
 
-def load_simple_map_mappings(snomed_dir: str) -> Dict[str, List[str]]:
+def load_simple_map_mappings(snomed_dir: str) -> dict[str, list[str]]:
     """Load actual SNOMED CT to target code mappings from RF2 Simple Map files.
 
     Args:
@@ -26,8 +33,9 @@ def load_simple_map_mappings(snomed_dir: str) -> Dict[str, List[str]]:
 
     Returns:
         Dict mapping SNOMED concept IDs to list of mapped codes
+
     """
-    if not snomed_dir or not os.path.exists(snomed_dir):
+    if not snomed_dir or not pathlib.Path(snomed_dir).exists():
         return {}
 
     mappings = {}
@@ -39,33 +47,34 @@ def load_simple_map_mappings(snomed_dir: str) -> Dict[str, List[str]]:
 
         map_files = [
             f
-            for f in os.listdir(snapshot_dir)
-            if "SimpleMap" in f and f.endswith(".txt")
+            for f in pathlib.Path(snapshot_dir).iterdir()
+            if "SimpleMap" in f.name and f.suffix == ".txt"
         ]
         if not map_files:
             return {}
 
         for map_file in map_files:
-            _process_map_file(os.path.join(snapshot_dir, map_file), mappings)
+            _process_map_file(pathlib.Path(snapshot_dir) / map_file, mappings)
 
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError):
         pass
 
     return mappings
 
 
-def _find_snapshot_dir(snomed_dir: str) -> Optional[str]:
+def _find_snapshot_dir(snomed_dir: str) -> str | None:
     """Find the Snapshot/Refset/Map directory."""
     for subdir in ["Snapshot", "Full"]:
-        map_path = os.path.join(snomed_dir, subdir, "Refset", "Map")
-        if os.path.exists(map_path):
-            return map_path
+        map_path = pathlib.Path(snomed_dir) / subdir / "Refset" / "Map"
+        if map_path.exists():
+            return str(map_path)
     return None
 
 
-def _process_map_file(file_path: str, mappings: Dict[str, List[str]]) -> None:
+def _process_map_file(file_path: pathlib.Path, mappings: dict[str, list[str]]) -> None:
     """Process a single Simple Map file and add to mappings dict."""
-    import pandas as pd
+    if pd is None:
+        return
 
     try:
         df = pd.read_csv(file_path, sep="\t", low_memory=False)
@@ -87,7 +96,7 @@ def _process_map_file(file_path: str, mappings: Dict[str, List[str]]) -> None:
             if map_target not in mappings[snomed_cui]:
                 mappings[snomed_cui].append(map_target)
 
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, pd.errors.ParserError):
         pass
 
 
@@ -108,10 +117,10 @@ _FALLBACK_VOCABULARY_MAPPINGS = {
 }
 
 
-def _get_fallback_concepts() -> List[str]:
+def _get_fallback_concepts() -> list[str]:
     """Get list of concept IDs from fallback mappings."""
     concepts = []
-    for _, pairs in _FALLBACK_VOCABULARY_MAPPINGS.items():
+    for pairs in _FALLBACK_VOCABULARY_MAPPINGS.values():
         for cui, _ in pairs:
             concepts.append(cui)
     return list(set(concepts))
@@ -119,9 +128,9 @@ def _get_fallback_concepts() -> List[str]:
 
 def generate_mapping_dataset(
     num_samples: int = 100,
-    snomed_concepts: Optional[List[str]] = None,
-    snomed_dir: Optional[str] = None,
-) -> List[dict]:
+    snomed_concepts: list[str] | None = None,
+    snomed_dir: str | None = None,
+) -> list[dict]:
     """Generate vocabulary mapping dataset from real SNOMED CT RF2 data.
 
     This function extracts actual mappings from the Simple Map reference set
@@ -137,6 +146,7 @@ def generate_mapping_dataset(
 
     Returns:
         List of dicts with keys: 'snomed_cui', 'target_codes'
+
     """
     if snomed_dir is None:
         snomed_dir = os.environ.get(
@@ -167,7 +177,7 @@ def generate_mapping_dataset(
 
         # If no RF2 mappings and this is a fallback concept, use the hardcoded values
         if not target_codes:
-            for _category, pairs in _FALLBACK_VOCABULARY_MAPPINGS.items():
+            for pairs in _FALLBACK_VOCABULARY_MAPPINGS.values():
                 for cui_pair, codes in pairs:
                     if str(cui_pair) == str(cui):
                         target_codes = list(codes)
@@ -181,14 +191,15 @@ def generate_mapping_dataset(
                 "target_codes": target_codes.copy() if target_codes else [],
                 "has_mapping": len(target_codes) > 0,
                 "num_expected": len(target_codes),
-            }
+            },
         )
 
     return results
 
 
 def load_mapping_datasets(
-    cache_dir: Optional[str] = None, snomed_dir: Optional[str] = None
+    cache_dir: str | None = None,
+    snomed_dir: str | None = None,
 ) -> dict:
     """Load pre-generated mapping datasets or generate new ones.
 
@@ -198,15 +209,14 @@ def load_mapping_datasets(
 
     Returns:
         Dict with dataset names as keys and lists of samples
-    """
-    import os
 
+    """
     if cache_dir is None:
-        cache_dir = os.path.join(
-            os.path.dirname(__file__), "..", "cache", "mapping_datasets"
+        cache_dir = str(
+            pathlib.Path(__file__).parent.parent / "cache" / "mapping_datasets",
         )
 
-    os.makedirs(cache_dir, exist_ok=True)
+    pathlib.Path(cache_dir).mkdir(exist_ok=True, parents=True)
 
     return {
         "small": generate_mapping_dataset(num_samples=25, snomed_dir=snomed_dir),

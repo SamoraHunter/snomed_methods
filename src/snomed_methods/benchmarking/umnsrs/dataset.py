@@ -2,8 +2,14 @@
 # SPDX-License-Identifier: MIT
 """UMNSRS Dataset loader for benchmarking semantic similarity/relatedness tasks."""
 
-import os
-from typing import Any, Optional
+from __future__ import annotations
+
+import pathlib
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 try:
     from datasets import load_dataset
@@ -19,6 +25,7 @@ def _convert_labels_to_float(item: dict) -> dict:
 
     Returns:
         Item with label converted to float
+
     """
     item = dict(item)
     if "label" in item and not isinstance(item["label"], (int, float)):
@@ -29,9 +36,10 @@ def _convert_labels_to_float(item: dict) -> dict:
 def download_umnsrs(
     subset: str = "relatedness",
     split: str = "train",
-    cache_dir: Optional[str] = None,
+    cache_dir: str | None = None,
+    *,
     convert_labels_to_float: bool = True,
-) -> Any:
+) -> object:
     """Download and load the UMNSRS dataset from Hugging Face.
 
     Args:
@@ -62,10 +70,14 @@ def download_umnsrs(
         >>> print(dataset[0])
         {'id': '0', 'document_id': '0', 'text_1': 'Carbatrol',
          'text_2': 'Dilantin', 'label': 797.5}
+
     """
     if load_dataset is None:
-        raise ImportError(
+        msg = (
             "The 'datasets' library is required. Install it with: pip install datasets"
+        )
+        raise ImportError(
+            msg,
         )
 
     valid_subsets = [
@@ -76,7 +88,8 @@ def download_umnsrs(
     ]
 
     if subset not in valid_subsets:
-        raise ValueError(f"Invalid subset '{subset}'. Must be one of: {valid_subsets}")
+        msg = f"Invalid subset '{subset}'. Must be one of: {valid_subsets}"
+        raise ValueError(msg)
 
     dataset_name = "bigbio/umnsrs"
     full_subset_name = f"umnsrs_{subset}_bigbio_pairs"
@@ -99,13 +112,16 @@ def download_umnsrs(
         }
         subset_desc = subset_info.get(subset, "")
 
-        raise ConnectionError(
+        msg = (
             f"Failed to download UMNSRS {subset} dataset from Hugging Face Hub.\n"
             f"{subset_desc}\n\n"
             f"Please check your internet connection and try again. If the "
             f"issue persists, you can manually download the dataset from:\n"
             f"https://huggingface.co/datasets/bigbio/umnsrs\n"
             f"Error details: {e}"
+        )
+        raise ConnectionError(
+            msg,
         ) from e
 
     return dataset
@@ -114,7 +130,8 @@ def download_umnsrs(
 def get_umnsrs_pairs(
     subset: str = "relatedness",
     split: str = "train",
-    cache_dir: Optional[str] = None,
+    cache_dir: str | None = None,
+    *,
     convert_labels_to_float: bool = True,
 ) -> list[dict]:
     """Get UMNSRS concept pairs as a list of dictionaries.
@@ -127,6 +144,7 @@ def get_umnsrs_pairs(
 
     Returns:
         List of dicts with keys: id, document_id, text_1, text_2, label
+
     """
     dataset = download_umnsrs(subset=subset, split=split, cache_dir=cache_dir)
     pairs = [dict(item) for item in dataset]
@@ -138,8 +156,8 @@ def get_umnsrs_pairs(
 
 def save_umnsrs_to_csv(
     subset: str = "relatedness",
-    output_path: Optional[str] = None,
-    cache_dir: Optional[str] = None,
+    output_path: str | None = None,
+    cache_dir: str | None = None,
 ) -> str:
     """Save UMNSRS dataset to CSV file.
 
@@ -150,11 +168,10 @@ def save_umnsrs_to_csv(
 
     Returns:
         Path to saved CSV file
-    """
-    import pandas as pd  # noqa: F401
 
+    """
     if output_path is None:
-        output_path = os.path.join(os.path.dirname(__file__), f"{subset}.csv")
+        output_path = pathlib.Path(__file__).parent / f"{subset}.csv"
 
     dataset = download_umnsrs(subset=subset, cache_dir=cache_dir)
     df = dataset.to_pandas()
@@ -166,7 +183,8 @@ def save_umnsrs_to_csv(
 
 def load_from_csv(
     subset: str = "relatedness",
-    csv_path: Optional[str] = None,
+    csv_path: str | None = None,
+    *,
     convert_labels_to_float: bool = True,
 ) -> list[dict]:
     """Load UMNSRS data from a previously saved CSV file.
@@ -178,11 +196,14 @@ def load_from_csv(
 
     Returns:
         List of dicts with keys: id, document_id, text_1, text_2, label
-    """
-    import pandas as pd  # noqa: F401
 
+    """
     if csv_path is None:
-        csv_path = os.path.join(os.path.dirname(__file__), f"{subset}.csv")
+        csv_path = pathlib.Path(__file__).parent / f"{subset}.csv"
+
+    if pd is None:
+        msg = "pandas is required. Install with: pip install pandas"
+        raise ImportError(msg)
 
     df = pd.read_csv(csv_path)
     if convert_labels_to_float and "label" in df.columns:
