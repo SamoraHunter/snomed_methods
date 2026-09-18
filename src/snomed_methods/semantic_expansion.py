@@ -616,7 +616,11 @@ class ProcessConceptContext:
 
 def expand_concepts(
     term_or_terms: str | list[str],
-    config: ExpandConfig | None = None,
+    uk_path: str | None = None,
+    max_concepts: int = 100,
+    top_n_per_term: int = 50,
+    use_hierarchy: bool = True,
+    use_medcat: bool = False,
 ) -> SearchResults:
     """Convenience function to perform semantic expansion.
 
@@ -624,13 +628,22 @@ def expand_concepts(
 
     Args:
         term_or_terms: Single term or list of terms
-        config: Configuration object for expansion params
+        uk_path: Path to UK Clinical RF2 directory
+        max_concepts: Maximum concepts from hierarchy (default 100)
+        top_n_per_term: Max results per search term (default 50)
+        use_hierarchy: Enable hierarchy expansion (default True)
+        use_medcat: Enable MedCAT semantic search (default False)
 
     Returns:
         SearchResults object
     """
-    if config is None:
-        config = ExpandConfig()
+    config = ExpandConfig(
+        uk_path=uk_path,
+        max_concepts=max_concepts,
+        top_n_per_term=top_n_per_term,
+        use_hierarchy=use_hierarchy,
+        use_medcat=use_medcat,
+    )
     searcher = SemanticSearch(uk_path=config.uk_path)
     return searcher.search(
         term_or_terms,
