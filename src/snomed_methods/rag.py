@@ -187,13 +187,14 @@ class RAGRetriever:
         )
 
         results = []
-        for i in range(min(top_k, len(indices[0]))):
-            idx = indices[0][i]
-            if idx >= 0 and idx < len(self.cui_list):
-                cui = self.cui_list[idx]
-                score = float(distances[0][i])
-                concept_name = self.cui_to_name.get(cui, f"CUI: {cui}")
-                results.append((cui, concept_name, score if return_scores else 1.0))
+        if len(indices) > 0 and len(indices[0]) > 0:
+            for i in range(min(top_k, len(indices[0]))):
+                idx = indices[0][i]
+                if idx >= 0 and idx < len(self.cui_list):
+                    cui = self.cui_list[idx]
+                    score = float(distances[0][i])
+                    concept_name = self.cui_to_name.get(cui, f"CUI: {cui}")
+                    results.append((cui, concept_name, score if return_scores else 1.0))
 
         return results
 

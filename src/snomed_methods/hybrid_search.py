@@ -182,7 +182,7 @@ class HybridSearch:
                     cached_embeddings_path,
                 )
 
-    def search(  # noqa: C901
+    def search(
         self,
         query: str,
         *,

@@ -302,7 +302,7 @@ class SemanticSearch:
 
         return results_codes, results_names
 
-    def _medcat_expansion(  # noqa: C901
+    def _medcat_expansion(
         self,
         cui_list: list[str],
         context_type: str = "long",
