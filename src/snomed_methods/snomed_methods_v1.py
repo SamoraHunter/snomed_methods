@@ -787,8 +787,21 @@ class SnomedRelations:
 
     def get_subsumed_concepts(
         self,
-        config: SubsumedConceptsConfig,
+        cui: int | str | None = None,
+        include_ancestors: bool = False,
+        include_descendants: bool = True,
+        max_depth: int = 10,
+        active_only: bool = True,
+        semantic_tags: list[str] | None = None,
     ) -> tuple[list[int], list[str]]:
+        config = SubsumedConceptsConfig(
+            cui=cui or "",
+            include_ancestors=include_ancestors,
+            include_descendants=include_descendants,
+            max_depth=max_depth,
+            active_only=active_only,
+            semantic_tags=semantic_tags,
+        )
         """Calculate transitive closure over is_a relationships to retrieve
         entire active DAG subgraph for a concept.
 
