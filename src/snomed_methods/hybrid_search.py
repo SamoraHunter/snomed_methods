@@ -639,7 +639,13 @@ def expand_concepts(
         uk_path: Path to SNOMED UK Clinical RF2
         medcat_path: Path to MedCAT model pack
         model_path: Path to embedding model
-        config: Search configuration with weights and parameters
+        max_concepts: Maximum number of concepts to return
+        top_k: Number of top concepts per search type
+        term_weight: Weight for term matching
+        hierarchy_weight: Weight for hierarchy expansion
+        embedding_weight: Weight for embedding similarity
+        max_hierarchy_nodes: Maximum nodes in hierarchy expand
+        semantic_filter: List of semantic categories to filter
 
     Returns:
         SearchResult object with ranked concepts
@@ -650,4 +656,13 @@ def expand_concepts(
         medcat_path=medcat_path,
         model_path=model_path,
     )
-    return searcher.search(term_or_terms, config=config)
+    return searcher.search(
+        term_or_terms,
+        max_concepts=max_concepts,
+        top_k=top_k,
+        term_weight=term_weight,
+        hierarchy_weight=hierarchy_weight,
+        embedding_weight=embedding_weight,
+        max_hierarchy_nodes=max_hierarchy_nodes,
+        semantic_filter=semantic_filter,
+    )

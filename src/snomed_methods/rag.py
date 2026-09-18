@@ -232,9 +232,10 @@ class RAGRetriever:
 
         import pickle  # noqa: PLC0415
 
-        if path.endswith(".faiss"):
-            faiss.write_index(self.index, path)
-        elif path.endswith(".pkl"):
+        path_str = str(path)
+        if path_str.endswith(".faiss"):
+            faiss.write_index(self.index, path_str)
+        elif path_str.endswith(".pkl"):
             with Path(path).open("wb") as f:
                 pickle.dump(
                     {
@@ -245,7 +246,7 @@ class RAGRetriever:
                     f,
                 )
         else:
-            faiss.write_index(self.index, path + ".faiss")
+            faiss.write_index(self.index, path_str + ".faiss")
 
     def load_index(self, path: str) -> None:
         """

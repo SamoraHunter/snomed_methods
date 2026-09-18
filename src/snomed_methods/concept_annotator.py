@@ -292,7 +292,7 @@ class ClinicalConceptAnnotator:
                 hierarchy_weight=0.2,
                 embedding_weight=0.2,
             )
-        except (KeyError, TypeError, AttributeError):
+        except (KeyError, TypeError, AttributeError, ValueError):
             return result
 
         # Score concepts based on term matches
@@ -394,7 +394,10 @@ def batch_annotate_texts(
 
     Args:
         texts: List of clinical texts
-        config: Annotator configuration (optional)
+        uk_path: Path to UK Clinical RF2 directory
+        model_path: Path to embedding model
+        backend: Embedding backend
+        device: Device for embeddings
         top_k: Number of results per text
 
     Returns:
@@ -402,9 +405,9 @@ def batch_annotate_texts(
 
     """
     annotator = ClinicalConceptAnnotator(
-        uk_path=config.uk_path if config else None,
-        model_path=config.model_path if config else None,
-        backend=config.backend if config else "transformers",
-        device=config.device if config else "cpu",
+        uk_path=uk_path,
+        model_path=model_path,
+        backend=backend,
+        device=device,
     )
     return annotator.batch_annotate(texts, top_k=top_k)

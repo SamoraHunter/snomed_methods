@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
 
 import pandas as pd
 
@@ -141,21 +140,21 @@ def load_results(filepath: str) -> dict[str, dict]:
 def rank_benchmarks(
     benchmark_results: dict[str, dict],
     metric: str,
-    ascending: Literal["asc", "desc"] = "desc",
+    ascending: bool = False,
 ) -> pd.DataFrame:
     """Rank benchmarks by a specific metric.
 
     Args:
         benchmark_results: Dict mapping benchmark name to its result dict
         metric: Metric to rank by
-        ascending: Sort order (False = highest first)
+        ascending: Sort order (True = lowest first)
 
     Returns:
         DataFrame with rankings
 
     """
     df = compare_benchmarks(benchmark_results, metric=metric)
-    return df.sort_values(metric, ascending=ascending == "asc")
+    return df.sort_values(metric, ascending=ascending)
 
 
 def best_performance(

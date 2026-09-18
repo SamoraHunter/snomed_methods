@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
-import tqdm
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,8 @@ class ClinicalConceptEmbedder:
         elif backend == "transformers":
             self._init_transformers_model()
         elif backend == "ollama":
-            self._init_ollama_client(self.ollama_base_url)
+            self.ollama_base_url: str = ollama_base_url
+            self._model_type = "ollama"
         else:
             msg = (
                 f"Unsupported backend: {backend}. Use 'hf', 'transformers', or 'ollama'"

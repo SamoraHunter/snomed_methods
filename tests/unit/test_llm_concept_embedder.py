@@ -241,13 +241,20 @@ class TestConceptVectorSearch(unittest.TestCase):
 
     def test_build_index(self) -> None:
         """Test building FAISS index."""
-        with patch.dict("sys.modules", {"faiss": MagicMock()}):
-            from snomed_methods.llm_concept_embedder import ConceptVectorSearch
+        import faiss
 
-            mock_faiss = sys.modules["faiss"]
-            mock_index = MagicMock()
-            mock_faiss.IndexFlatIP.return_value = mock_index
-            mock_faiss.IndexHNSWFlat.return_value = mock_index
+        mock_index = MagicMock()
+
+        with patch("snomed_methods.llm_concept_embedder.faiss", spec=faiss):
+            from snomed_methods.llm_concept_embedder import (
+                ConceptVectorSearch,
+            )
+            from snomed_methods.llm_concept_embedder import (
+                faiss as embedder_faiss,
+            )
+
+            embedder_faiss.IndexFlatIP.return_value = mock_index
+            embedder_faiss.IndexHNSWFlat.return_value = mock_index
 
             search = ConceptVectorSearch(self.test_embeddings)
             search.build_index(index_type="FlatIP")

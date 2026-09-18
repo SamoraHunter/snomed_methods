@@ -31,11 +31,6 @@ import pandas as pd
 if TYPE_CHECKING:
 
     from snomed_methods.snomed_term_lookup import SnomedTermLookup
-else:
-    try:
-        from snomed_methods.snomed_methods_v1 import SnomedRelations as _SnomedRelations
-    except ImportError:
-        _SnomedRelations = None
 
 SIMILARITY_THRESHOLD = 0.3
 
@@ -326,7 +321,14 @@ class SemanticSearch:
         Returns:
             Tuple of (codes, names) lists
         """
-        if importlib.util.find_spec("medcat") is None:
+        if not importlib.util.find_spec("medcat"):
+            return [], []
+
+        try:
+            from snomed_methods.snomed_methods_v1 import (
+                SnomedRelations as _SnomedRelations,
+            )
+        except (ImportError, FileNotFoundError):
             return [], []
 
         snomed_path = (
@@ -335,9 +337,6 @@ class SemanticSearch:
             / "Terminology"
             / "sct2_Relationship_UKCLFull_GB1000000_20260603.txt"
         )
-
-        if _SnomedRelations is None:
-            return [], []
 
         snomed = _SnomedRelations(medcat=True, snomed_rf2_full_path=str(snomed_path))
 

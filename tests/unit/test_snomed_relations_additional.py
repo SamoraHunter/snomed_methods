@@ -256,7 +256,7 @@ class TestSnomedRelationsExpandCodesWrapper:
         def mock_expand_local(
             _cui: str,
             *,
-            _debug: bool = False,
+            debug: bool = False,
         ) -> tuple[list[int], list[str]]:
             return ([100], ["Name"])
 
@@ -282,7 +282,7 @@ class TestSnomedRelationsExpandCodesWrapper:
         def mock_expand_snowstorm(
             _cui: str,
             *,
-            _debug: bool = False,
+            debug: bool = False,
         ) -> tuple[list[int], list[str]]:
             called["value"] = True
             return ([100], ["Name"])

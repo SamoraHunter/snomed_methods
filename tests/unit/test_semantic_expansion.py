@@ -300,6 +300,8 @@ class TestSemanticSearch:
 
     def test_search_with_medcat_enabled(self) -> None:
         """Test search with MedCAT enabled."""
+        from snomed_methods.semantic_expansion import SemanticSearch
+
         with patch(
             "snomed_methods.semantic_expansion.importlib.util.find_spec",
             return_value=True,
@@ -310,8 +312,6 @@ class TestSemanticSearch:
                 with patch(
                     "snomed_methods.snomed_methods_v1.SnomedRelations",
                 ) as mock_relations_cls:
-                    from snomed_methods.semantic_expansion import SemanticSearch
-
                     mock_lookup_instance = MagicMock()
                     mock_lookup.return_value = mock_lookup_instance
 
@@ -321,12 +321,14 @@ class TestSemanticSearch:
 
                     searcher = SemanticSearch(uk_path="/test/path")
 
-            results = searcher.search(["meningioma", "tumor"], max_concepts=50)
+                    results = searcher.search(["meningioma", "tumor"], max_concepts=50)
 
-            assert hasattr(results, "concepts")
+                    assert hasattr(results, "concepts")
 
     def test_search_metrics(self) -> None:
         """Test search returns correct metrics."""
+        from snomed_methods.semantic_expansion import SemanticSearch
+
         with patch(
             "snomed_methods.semantic_expansion.importlib.util.find_spec",
             return_value=True,
@@ -338,8 +340,6 @@ class TestSemanticSearch:
                     "os.path.exists",
                     return_value=False,
                 ):
-                    from snomed_methods.semantic_expansion import SemanticSearch
-
                     mock_lookup_instance = MagicMock()
                     mock_lookup_instance.find_concepts_by_term.return_value = [
                         ("1001", "Meningioma"),
@@ -348,12 +348,12 @@ class TestSemanticSearch:
 
                     searcher = SemanticSearch(uk_path="/test/path")
 
-            results = searcher.search("meningioma", max_concepts=50)
+                    results = searcher.search("meningioma", max_concepts=50)
 
-            assert hasattr(results, "concepts")
-            assert hasattr(results, "metrics")
-            metrics = results.metrics
-            assert "total" in metrics
+                    assert hasattr(results, "concepts")
+                    assert hasattr(results, "metrics")
+                    metrics = results.metrics
+                    assert "total" in metrics
 
 
 class TestSearchResults:

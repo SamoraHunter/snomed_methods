@@ -12,6 +12,7 @@ Provides tools for mapping SNOMED CT concepts to other terminologies:
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -352,7 +353,7 @@ class ConceptMapper:
                             "source": "MedCAT model pack",
                         },
                     )
-        except (KeyError, TypeError, AttributeError):
+        except (shutil.ReadError, KeyError, TypeError, AttributeError):
             pass
 
         if not mappings:

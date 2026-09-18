@@ -231,7 +231,7 @@ def _process_similarity_sample(
         similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
         score = float(similarity)
         normalized_score = (score + 1) / 2
-    except (KeyError, TypeError, AttributeError):
+    except (KeyError, TypeError, AttributeError, ValueError):
         return None, None
     else:
         return normalized_score, None
