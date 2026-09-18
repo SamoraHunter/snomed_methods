@@ -22,10 +22,10 @@ Search Parameters:
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import dataclass
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -126,6 +126,8 @@ class SemanticSearch:
 
         if not terms:
             return set()
+
+        results: set[tuple[str, str]] = set()
 
         try:
             exact_matches: list[tuple[str, str]] = [

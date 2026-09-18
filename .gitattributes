@@ -1,0 +1,28 @@
+# Normalize line endings for all text files
+* text=auto
+
+# Preserve CRLF for Windows batch files and scripts that need it
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Preserve LF for Unix shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Always use LF for Python files
+*.py text eol=lf
+
+# Use platform native line endings for configuration files
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# Binary files should never have line endings modified
+*.{png,jpg,jpeg,gif,ico,pdf} binary
+
+# Large model archives and data files
+*.pkl binary
+model_packs/*.zip binary
+embedding_models/* binary
+uk_sct2cl_*/* binary

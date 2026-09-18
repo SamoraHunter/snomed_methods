@@ -137,9 +137,9 @@ test_outputs/
 test_results.csv
 coverage.xml
 
-# Large models and data packs (uncomment if needed)
-# embedding_models/
-# model_packs/
+# Large models and data packs
+embedding_models/
+model_packs/
 
 # Cache directories
 simple_map_files/
