@@ -53,7 +53,9 @@ class SnomedConfig:
             ),
         )
         self.cache_dir: str = os.environ.get("SNOMED_CACHE_DIR", "./.cache")
-        self.embeddings_cache_dir: str = self.cache_dir / "embeddings"
+        self.embeddings_cache_dir: str = str(
+            pathlib.Path(self.cache_dir) / "embeddings",
+        )
         self.embedding_format: str = os.environ.get("EMBEDDING_FORMAT", "numpy")
         self.use_pickle: bool = os.environ.get("USE_PICKLE", "false").lower() == "true"
         self._initialized = True
