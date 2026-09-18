@@ -9,6 +9,7 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -72,9 +73,16 @@ class SubsumedConceptsConfig:
 
 
 class SnomedRelations:
-    def __init__(self, config: SnomedRelationsConfig) -> None:
+    def __init__(
+        self,
+        config: SnomedRelationsConfig | None = None,
+        **kwargs: dict[str, Any],
+    ) -> None:
 
         sys.path.insert(0, "..")
+
+        if config is None:
+            config = SnomedRelationsConfig(**kwargs)
 
         snomed_default = os.environ.get(
             "SNOMED_RF2_PATH",
