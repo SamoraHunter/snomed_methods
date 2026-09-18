@@ -113,7 +113,7 @@ class SemanticSearch:
         Returns:
             Set of (cui, term) tuples for matched concepts
         """
-        import warnings  # noqa: PLC0415
+        import warnings
 
         if importlib.util.find_spec("snomed_term_lookup") is None:
             warnings.warn("snomed-term-lookup not available", stacklevel=2)
@@ -183,7 +183,7 @@ class SemanticSearch:
             SnomedTermLookup instance or None.
         """
         if importlib.util.find_spec("snomed_term_lookup") is not None:
-            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
+            from snomed_methods.snomed_term_lookup import (
                 create_term_lookup_from_directory,
             )
 
@@ -456,7 +456,7 @@ class SemanticSearch:
                 msg,
             )
 
-        from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
+        from snomed_methods.snomed_term_lookup import (
             create_term_lookup_from_directory,
         )
 

@@ -121,7 +121,7 @@ class RAGRetriever:
             RuntimeError: If FAISS is not installed.
         """
         try:
-            import faiss  # noqa: PLC0415
+            import faiss
         except ImportError as e:
             msg = (
                 "FAISS not installed. "
@@ -225,12 +225,12 @@ class RAGRetriever:
             RuntimeError: If FAISS is not installed.
         """
         try:
-            import faiss  # noqa: PLC0415
+            import faiss
         except ImportError as e:
             msg = "FAISS not installed"
             raise RuntimeError(msg) from e
 
-        import pickle  # noqa: PLC0415
+        import pickle
 
         path_str = str(path)
         if path_str.endswith(".faiss"):
@@ -265,12 +265,12 @@ class RAGRetriever:
             ValueError: If the loaded index is incompatible.
         """
         try:
-            import faiss  # noqa: PLC0415
+            import faiss
         except ImportError as e:
             msg = "FAISS not installed"
             raise RuntimeError(msg) from e
 
-        import pickle  # noqa: PLC0415
+        import pickle
 
         if path.endswith(".faiss"):
             self.index = faiss.read_index(path)
@@ -383,7 +383,7 @@ understand the relevance of this SNOMED concept to their search query."""
     def _generate_ollama(self, prompt: str) -> str:
         """Generate explanation using Ollama."""
         try:
-            import ollama  # noqa: PLC0415
+            import ollama
 
             response = ollama.chat(
                 model=self.model_name,
@@ -404,7 +404,7 @@ understand the relevance of this SNOMED concept to their search query."""
 
     def _generate_hf(self, prompt: str) -> str:
         """Generate explanation using Hugging Face model."""
-        from transformers import pipeline  # noqa: PLC0415
+        from transformers import pipeline
 
         try:
             generator = pipeline(

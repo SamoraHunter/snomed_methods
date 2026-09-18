@@ -43,7 +43,7 @@ from snomed_methods.snomed_term_lookup import (
 def _get_umls_mapper() -> dict:
     """Lazy import for UMLSCIMapper to avoid torch dependency."""
     try:
-        from snomed_methods.umlsci_mapper import (  # noqa: PLC0415
+        from snomed_methods.umlsci_mapper import (
             UMLSCIMapper,
             batch_map_to_umls,
             map_from_umls,

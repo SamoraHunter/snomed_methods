@@ -1,13 +1,13 @@
+import importlib.util
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def mock_ollama():
+def mock_ollama() -> None:
     """Mock ollama module to avoid connection errors in unit tests."""
-    from unittest.mock import MagicMock
-
     mock_ollama = MagicMock()
     mock_response = {"message": {"content": "Test explanation"}}
     mock_ollama.chat.return_value = mock_response
@@ -20,14 +20,11 @@ def mock_ollama():
 @pytest.fixture(autouse=True, scope="session")
 def ensure_faiss_mock() -> None:
     """Ensure FAISS can be mocked when unavailable for tests."""
-    import importlib.util
-    from unittest.mock import MagicMock
-
     try:
         spec = importlib.util.find_spec("faiss")
         if spec is not None:
             return
-    except Exception:
+    except ImportError:
         pass
 
     mock_faiss_module = MagicMock()

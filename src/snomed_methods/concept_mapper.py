@@ -469,7 +469,7 @@ class ConceptMapper:
 
     def _get_term_lookup(self) -> object:
         """Get or create a SnomedTermLookup instance."""
-        from snomed_methods import (  # noqa: PLC0415
+        from snomed_methods import (
             SnomedTermLookup,
             create_term_lookup_from_directory,
         )

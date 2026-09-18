@@ -352,6 +352,7 @@ class ClinicalConceptAnnotator:
 
 def annotate_text(
     text: str,
+    *,
     uk_path: str | None = None,
     model_path: str | None = None,
     backend: str = "transformers",
@@ -384,6 +385,7 @@ def annotate_text(
 
 def batch_annotate_texts(
     texts: list[str],
+    *,
     uk_path: str | None = None,
     model_path: str | None = None,
     backend: str = "transformers",

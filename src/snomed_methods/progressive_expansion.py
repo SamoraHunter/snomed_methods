@@ -106,7 +106,7 @@ class TermMatchingStage(StageExecutor):
         if self._lookup is not None:
             return
         try:
-            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415 (lazy import for optional dependency)
+            from snomed_methods.snomed_term_lookup import (
                 create_term_lookup_from_directory,
             )
 
@@ -179,7 +179,7 @@ class HierarchyExpansionStage(StageExecutor):
         if self._relations is not None:
             return
         try:
-            from snomed_methods.snomed_methods_v1 import (  # noqa: PLC0415
+            from snomed_methods.snomed_methods_v1 import (
                 SnomedRelations,
             )
 
@@ -261,7 +261,7 @@ class EmbeddingSimilarityStage(StageExecutor):
         if self._embedder is not None:
             return
         try:
-            from snomed_methods.llm_concept_embedder import (  # noqa: PLC0415
+            from snomed_methods.llm_concept_embedder import (
                 ClinicalConceptEmbedder,
             )
 
@@ -281,10 +281,10 @@ class EmbeddingSimilarityStage(StageExecutor):
         if self._search_engine is not None:
             return
         try:
-            from snomed_methods.llm_concept_embedder import (  # noqa: PLC0415
+            from snomed_methods.llm_concept_embedder import (
                 ConceptVectorSearch,
             )
-            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
+            from snomed_methods.snomed_term_lookup import (
                 create_term_lookup_from_directory,
             )
 
@@ -369,7 +369,7 @@ class MedCatExpansionStage(StageExecutor):
         if self._medcat is not None:
             return
         try:
-            from medcat.cat import CAT  # noqa: PLC0415
+            from medcat.cat import CAT
 
             medcat_path = self.medcat_path or self._get_default_medcat_path()
             if Path(medcat_path).exists():
@@ -448,7 +448,7 @@ class LLMExpansionStage(StageExecutor):
 
     def _generate_ollama(self, prompt: str) -> list[str]:
         try:
-            import ollama  # noqa: PLC0415
+            import ollama
 
             response = ollama.chat(
                 model=self.model_name,
@@ -470,7 +470,7 @@ class LLMExpansionStage(StageExecutor):
 
     def _generate_hf(self, prompt: str) -> list[str]:
         try:
-            from transformers import pipeline  # noqa: PLC0415
+            from transformers import pipeline
 
             generator = pipeline(
                 "text-generation",
@@ -613,7 +613,7 @@ class ExpandedExpansionResult:
             return []
 
         try:
-            from snomed_methods.snomed_term_lookup import (  # noqa: PLC0415
+            from snomed_methods.snomed_term_lookup import (
                 create_term_lookup_from_directory,
             )
 
@@ -649,7 +649,7 @@ class ExpandedExpansionResult:
     def to_dataframe(self) -> object | None:
         """Convert to pandas DataFrame."""
         try:
-            import pandas as pd  # noqa: PLC0415
+            import pandas as pd
 
             concepts = self.get_concepts_with_names()
             rows = []

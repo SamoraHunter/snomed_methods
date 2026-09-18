@@ -211,7 +211,7 @@ class TestSnomedRelationsExpandCodesParentsLocal:
 
 
 class TestSnomedRelationsExpandCodesLocalEmpty:
-    def test_expand_codes_local_debug_true(self) -> None:
+    def test_expand_codes_localdebug_true(self) -> None:
         df_path = get_tmp_path("test_snomed.csv")
         pd.DataFrame({"sourceId": [100], "destinationId": [50]}).to_csv(
             df_path,
@@ -226,7 +226,7 @@ class TestSnomedRelationsExpandCodesLocalEmpty:
         with contextlib.suppress(Exception):
             os.unlink(df_path)
 
-    def test_expand_codes_local_debug_false(self) -> None:
+    def test_expand_codes_localdebug_false(self) -> None:
         df_path = get_tmp_path("test_snomed.csv")
         pd.DataFrame({"sourceId": [100], "destinationId": [50]}).to_csv(
             df_path,

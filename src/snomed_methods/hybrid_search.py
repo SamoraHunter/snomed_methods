@@ -185,6 +185,7 @@ class HybridSearch:
     def search(  # noqa: C901
         self,
         query: str,
+        *,
         top_k: int = 20,
         term_weight: float = 0.3,
         hierarchy_weight: float = 0.2,
@@ -621,6 +622,7 @@ def semantic_filter_results(
 
 def expand_concepts(
     term_or_terms: str | list[str],
+    *,
     uk_path: str | None = None,
     medcat_path: str | None = None,
     model_path: str | None = None,

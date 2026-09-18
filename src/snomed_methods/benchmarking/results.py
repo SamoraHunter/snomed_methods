@@ -140,6 +140,7 @@ def load_results(filepath: str) -> dict[str, dict]:
 def rank_benchmarks(
     benchmark_results: dict[str, dict],
     metric: str,
+    *,
     ascending: bool = False,
 ) -> pd.DataFrame:
     """Rank benchmarks by a specific metric.

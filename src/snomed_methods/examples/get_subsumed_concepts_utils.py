@@ -48,7 +48,7 @@ def _get_snomed_path() -> str:
 
 def _get_lookup() -> object:
     """Get a SNOMED term lookup instance."""
-    from snomed_term_lookup import create_term_lookup_from_directory  # noqa: PLC0415
+    from snomed_term_lookup import create_term_lookup_from_directory
 
     # Get the UK Clinical data directory (one level up from relationships file)
     relationship_path = _get_snomed_path()
@@ -59,7 +59,7 @@ def _get_lookup() -> object:
 
 def _get_snomed_reader() -> object:
     """Get a SNOMED relations reader instance."""
-    from snomed_methods.snomed_methods_v1 import SnomedRelations  # noqa: PLC0415
+    from snomed_methods.snomed_methods_v1 import SnomedRelations
 
     return SnomedRelations(snomed_rf2_full_path=_get_snomed_path(), medcat=False)
 

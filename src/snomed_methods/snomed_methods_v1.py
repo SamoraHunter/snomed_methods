@@ -111,7 +111,7 @@ class SnomedRelations:
 
         if self.medcat:
             try:
-                from medcat.cat import CAT  # noqa: PLC0415
+                from medcat.cat import CAT
             except ImportError:
                 self.cat = None
 
