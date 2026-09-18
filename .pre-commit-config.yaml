@@ -16,3 +16,5 @@ repos:
     rev: v0.8.4
     hooks:
       - id: ruff
+        args:
+          - "--select=PLC0415"
