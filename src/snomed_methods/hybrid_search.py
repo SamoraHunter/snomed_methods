@@ -185,8 +185,12 @@ class HybridSearch:
     def search(  # noqa: C901
         self,
         query: str,
-        *,
-        config: SearchConfig | None = None,
+        top_k: int = 20,
+        term_weight: float = 0.3,
+        hierarchy_weight: float = 0.2,
+        embedding_weight: float = 0.5,
+        max_hierarchy_nodes: int = 100,
+        semantic_filter: list[str] | None = None,
     ) -> SearchResult:
         """Search for related SNOMED concepts using hybrid approach.
 
@@ -212,8 +216,14 @@ class HybridSearch:
 
         results = SearchResult()
 
-        if config is None:
-            config = self.SearchConfig()
+        self.SearchConfig(
+            top_k=top_k,
+            term_weight=term_weight,
+            hierarchy_weight=hierarchy_weight,
+            embedding_weight=embedding_weight,
+            max_hierarchy_nodes=max_hierarchy_nodes,
+            semantic_filter=semantic_filter,
+        )
 
         query_lower = query.lower()
         query_terms = [query_lower.strip()]
@@ -228,7 +238,7 @@ class HybridSearch:
 
         hierarchy_cuis, hierarchy_scores = self._hierarchy_search(
             list(term_results.keys())[:10],
-            config.max_hierarchy_nodes,
+            max_hierarchy_nodes,
         )
         results.hierarchy_matches = len(hierarchy_cuis)
         for cui, score in zip(hierarchy_cuis, hierarchy_scores):
@@ -238,7 +248,7 @@ class HybridSearch:
 
         embedding_results, embed_scores = self._embedding_search(
             query,
-            config.top_k * 2,
+            top_k * 2,
         )
         results.embedding_matches = len(embedding_results)
         for i, (cui, name) in enumerate(embedding_results):
@@ -250,18 +260,18 @@ class HybridSearch:
 
         final_results = self._rank_results(
             results.cui_scores,
-            config.term_weight,
-            config.hierarchy_weight,
-            config.embedding_weight,
+            term_weight,
+            hierarchy_weight,
+            embedding_weight,
         )
 
-        for cui, combined_score in final_results[: config.top_k]:
+        for cui, combined_score in final_results[:top_k]:
             results.results.append(
                 (cui, results.cui_to_term.get(cui, f"CUI: {cui}"), combined_score),
             )
 
-        if config.semantic_filter:
-            results = self._apply_semantic_filter(results, config.semantic_filter)
+        if semantic_filter:
+            results = self._apply_semantic_filter(results, semantic_filter)
 
         return results
 
@@ -611,11 +621,15 @@ def semantic_filter_results(
 
 def expand_concepts(
     term_or_terms: str | list[str],
-    *,
     uk_path: str | None = None,
     medcat_path: str | None = None,
     model_path: str | None = None,
-    config: HybridSearch.SearchConfig | None = None,
+    top_k: int = 20,
+    term_weight: float = 0.3,
+    hierarchy_weight: float = 0.2,
+    embedding_weight: float = 0.5,
+    max_hierarchy_nodes: int = 100,
+    semantic_filter: list[str] | None = None,
 ) -> SearchResult:
     """Convenience function for hybrid concept expansion.
 

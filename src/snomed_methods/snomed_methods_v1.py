@@ -550,7 +550,14 @@ class SnomedRelations:
 
     def retrieve_search_synonyms(
         self,
-        config: RetrieveSearchSynonymsConfig,
+        filter_root_cui: int | str,
+        n_recursion: int = 10,
+        context_type: str = "xxxlong",
+        type_id_filter: list[int] | None = None,
+        topn: int = 50,
+        debug: bool = False,
+        use_snomed: bool = True,
+        use_medcat: bool = True,
     ) -> tuple[
         list[str],
         list[str],
@@ -559,18 +566,30 @@ class SnomedRelations:
         list[str],
     ]:
         # Initialize a list to store names
-        if config.type_id_filter is None:
-            config.type_id_filter = []
+        if type_id_filter is None:
+            type_id_filter = []
+
+        RetrieveSearchSynonymsConfig(
+            filter_root_cui=filter_root_cui,
+            n_recursion=n_recursion,
+            context_type=context_type,
+            type_id_filter=type_id_filter,
+            topn=topn,
+            debug=debug,
+            use_snomed=use_snomed,
+            use_medcat=use_medcat,
+        )
+
         all_names = []
 
         # Retrieve data for snomed_tree if use_snomed is True
         retrieved_codes_snomed_tree, retrieved_names_snomed_tree = (
             ([], [])
-            if not config.use_snomed
+            if not use_snomed
             else self.recursive_code_expansion(
-                filter_root_cui=config.filter_root_cui,
-                n_recursion=config.n_recursion,
-                debug=config.debug,
+                filter_root_cui=filter_root_cui,
+                n_recursion=n_recursion,
+                debug=debug,
             )
         )
 
@@ -586,12 +605,12 @@ class SnomedRelations:
         # Retrieve data for medcat_cdb if use_medcat is True
         retrieved_codes_medcat_cdb, retrieved_names_medcat_cdb = (
             ([], [])
-            if not config.use_medcat
+            if not use_medcat
             else self.get_medcat_cdb_most_similar(
-                config.filter_root_cui,
-                context_type=config.context_type,
-                type_id_filter=config.type_id_filter,
-                topn=config.topn,
+                filter_root_cui,
+                context_type=context_type,
+                type_id_filter=type_id_filter,
+                topn=topn,
             )
         )
 
@@ -614,7 +633,14 @@ class SnomedRelations:
 
     def retrieve_search_synonyms_multi(
         self,
-        config: RetrieveSearchSynonymsMultiConfig,
+        filter_root_cui_list: list[str],
+        n_recursion: int = 10,
+        context_type: str = "xxxlong",
+        type_id_filter: list[int] | None = None,
+        topn: int = 50,
+        debug: bool = False,
+        use_snomed: bool = True,
+        use_medcat: bool = True,
     ) -> tuple[
         list[list[str]],
         list[list[str]],
@@ -641,8 +667,8 @@ class SnomedRelations:
                 - Flat list of all retrieved codes.
         """
         # Initialize lists to store results
-        if config.type_id_filter is None:
-            config.type_id_filter = []
+        if type_id_filter is None:
+            type_id_filter = []
         all_retrieved_codes_snomed_tree = []
         all_retrieved_names_snomed_tree = []
         all_retrieved_codes_medcat_cdb = []
@@ -651,15 +677,15 @@ class SnomedRelations:
         all_codes = []  # New list to store all codes
 
         # Iterate over each filter_root_cui in the list
-        for filter_root_cui in config.filter_root_cui_list:
+        for filter_root_cui in filter_root_cui_list:
             # Retrieve data for snomed_tree if use_snomed is True
             retrieved_codes_snomed_tree, retrieved_names_snomed_tree = (
                 ([], [])
-                if not config.use_snomed
+                if not use_snomed
                 else self.recursive_code_expansion(
                     filter_root_cui=filter_root_cui,
-                    n_recursion=config.n_recursion,
-                    debug=config.debug,
+                    n_recursion=n_recursion,
+                    debug=debug,
                 )
             )
 
@@ -682,12 +708,12 @@ class SnomedRelations:
             # Retrieve data for medcat_cdb if use_medcat is True
             retrieved_codes_medcat_cdb, retrieved_names_medcat_cdb = (
                 ([], [])
-                if not config.use_medcat
+                if not use_medcat
                 else self.get_medcat_cdb_most_similar(
                     filter_root_cui=filter_root_cui,
-                    context_type=config.context_type,
-                    type_id_filter=config.type_id_filter,
-                    topn=config.topn,
+                    context_type=context_type,
+                    type_id_filter=type_id_filter,
+                    topn=topn,
                 )
             )
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from snomed_methods.hybrid_search import HybridSearch
@@ -351,9 +351,12 @@ class ClinicalConceptAnnotator:
 
 
 def annotate_text(
-    *,
     text: str,
-    **config: dict[str, Any],
+    uk_path: str | None = None,
+    model_path: str | None = None,
+    backend: str = "transformers",
+    device: str = "cpu",
+    top_k: int = 10,
 ) -> AnnotationResult:
     """Convenience function to annotate clinical text.
 
@@ -369,14 +372,22 @@ def annotate_text(
         AnnotationResult with matched concepts
 
     """
-    annotator = ClinicalConceptAnnotator(**config)
-    return annotator.annotate(text, top_k=config.get("top_k", 10))
+    config = _AnnotatorConfig(
+        uk_path=uk_path,
+        model_path=model_path,
+        backend=backend,
+        device=device,
+    )
+    annotator = ClinicalConceptAnnotator(**config.__dict__)
+    return annotator.annotate(text, top_k=top_k)
 
 
 def batch_annotate_texts(
-    *,
     texts: list[str],
-    config: _AnnotatorConfig | None = None,
+    uk_path: str | None = None,
+    model_path: str | None = None,
+    backend: str = "transformers",
+    device: str = "cpu",
     top_k: int = 10,
 ) -> dict[str, AnnotationResult]:
     """Annotate multiple clinical texts.
